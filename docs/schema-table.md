@@ -1,6 +1,6 @@
 ## Entities
 ### `Plant`
-Represents an **individual plant**. Contains instance-specific information and references a shared plant species.
+Represents an **individual plant**. Contains instance-specific information and references a shared plant species
 
 | Attribute | Type | Nullable | Description | Example |
 | - | - | - | - | - |
@@ -12,7 +12,7 @@ Represents an **individual plant**. Contains instance-specific information and r
 ---
 
 ### `PlantSpecies`
-Represents **species-level data**. Shared, mostly static characteristics for plants of the same type.
+Represents **species-level data**. Shared, mostly static characteristics for plants of the same type
 
 | Attribute | Type | Nullable | Description | Example |
 | - | - | - | - | - |
@@ -37,7 +37,7 @@ Logical grouping of plants (e.g., location, category).
 ---
 
 ### `PlantGroup`
-**Junction table** implementing a many-to-many relationship between [Plant](#plant) and [Group](#group).
+**Junction table** implementing a many-to-many relationship between [Plant](#plant) and [Group](#group)
 
 | Attribute | Type | Nullable | Description | Example |
 | - | - | - | - | - |
@@ -48,7 +48,7 @@ Logical grouping of plants (e.g., location, category).
 ---
 
 ### `Action`
-An **action** is a type of care or maintenance performed on a plant (e.g., watering, fertilizing, pruning).
+An **action** is a type of care or maintenance performed on a plant (e.g., watering, fertilizing, pruning)
 
 | Attribute | Type | Nullable | Description | Example |
 | - | - | - | - | - |
@@ -59,7 +59,7 @@ An **action** is a type of care or maintenance performed on a plant (e.g., water
 ---
 
 ### `ActionLog`
-Records **which actions** were performed on **which plants or groups**.
+Records **which actions** were performed on **which plants or groups**
 
 | Attribute | Type | Nullable | Description | Example |
 | - | - | - | - | - |
@@ -73,7 +73,7 @@ Records **which actions** were performed on **which plants or groups**.
 ---
 
 ### `MaintenancePlan`
-Defines a **recurring set of actions** to be applied to a plant or group (e.g., “Water every 15 days”).
+Defines a **recurring set of actions** to be applied to a plant or group (e.g., “Water every 15 days”)
 
 | Attribute | Type | Nullable | Description | Example |
 | - | - | - | - | - |
@@ -85,7 +85,7 @@ Defines a **recurring set of actions** to be applied to a plant or group (e.g., 
 ---
 
 ### `MaintenancePlanAction`
-Links a [MaintenancePlan](#maintenanceplan) to the [Action](#action) to perform and specifies a schedule.
+Links a [MaintenancePlan](#maintenanceplan) to the [Action](#action) to perform and specifies a schedule
 
 | Attribute | Type | Nullable | Description | Example |
 | - | - | - | - | - |
@@ -97,7 +97,7 @@ Links a [MaintenancePlan](#maintenanceplan) to the [Action](#action) to perform 
 ---
 
 ### `Tool`
-Represents a **tool** used to complete an action (e.g., “warm water” for a watering action).
+Represents a **tool** used to complete an action (e.g., “warm water” for a watering action)
 
 | Attribute | Type | Nullable | Description | Example |
 | - | - | - | - | - |
@@ -108,7 +108,7 @@ Represents a **tool** used to complete an action (e.g., “warm water” for a w
 ---
 
 ### `ToolAction`
-**Junction table** implementing a many-to-many relationship between [Tool](#tool) and [Action](#action).
+**Junction table** implementing a many-to-many relationship between [Tool](#tool) and [Action](#action)
 
 | Attribute | Type | Nullable | Description | Example |
 | - | - | - | - | - |
@@ -119,7 +119,7 @@ Represents a **tool** used to complete an action (e.g., “warm water” for a w
 ---
 
 ### `ToolAttribute`
-Defines a **custom attribute** of a tool (e.g., “pH”, “temperature”).
+Defines a **custom attribute** of a tool (e.g., “pH”, “temperature”)
 
 | Attribute | Type | Nullable | Description | Example |
 | - | - | - | - | - |
@@ -130,7 +130,7 @@ Defines a **custom attribute** of a tool (e.g., “pH”, “temperature”).
 ---
 
 ### `ToolAttributeValue`
-Stores the value of a specific [ToolAttribute](#toolattribute) for a given [Tool](#tool).
+Stores the value of a specific [ToolAttribute](#toolattribute) for a given [Tool](#tool)
 
 | Attribute | Type | Nullable | Description | Example |
 | - | - | - | - | - |
@@ -139,3 +139,29 @@ Stores the value of a specific [ToolAttribute](#toolattribute) for a given [Tool
 | `tool_id` | `int` | NO | FK to [Tool](#tool) | 5 |
 | `value_string` | `string` | YES | Text value | "Slightly acidic" |
 | `value_number` | `float` | YES | Numeric value | 7.0 |
+
+
+### `GrowMedium`
+Material used as the substrate in which a [Plant](#plant) is grown
+
+| Attribute | Type | Nullable | Description | Example |
+| - | - | - | - | - |
+| `id` | `int` | NO | Primary key | 8 |
+| `name` | `string` | NO | Given name | "Coco Coir" |
+| `description` | `string` | YES | Short description | "good aeration and drainage" |
+| `water_retention` | `int` | YES | Relative rating (1–5) of water retention capacity | 2 | 
+| `aeration` | `int` | YES | Relative rating (1–5) of aeration potential | 5 |
+
+---
+
+### `GrowMediumBlend`
+Enables composing custom blends of [GrowMedium](#growmedium) 
+
+| Attribute | Type | Nullable | Description | Example |
+| - | - | - | - | - |
+| `id` | `int` | NO | Primary key | 2 |
+| `parent_id` | `int` | NO | Foreign key | 12 |
+| `child_id` | `int` | NO | Foreign key | 11 |
+| `proportion` | `float` | NO | Fractional contribution of the child medium to the parent blend (0–1) | 0.2 |
+
+
