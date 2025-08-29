@@ -14,23 +14,15 @@
     <nav class="nav flex-column">
         <AuthorizeView>
             <Authorized>
-               
-                <div class="nav-item">
-                    <form action="Account/Logout" method="post">
-                        <AntiforgeryToken />
-                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                        <button type="submit" class="nav-link">
-                            🚪 Logout
-                        </button>
-                    </form>
-                </div>
+
+
                 <div class="nav-item">
                     <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
                         🏠 Home
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="#">
+                    <NavLink class="nav-link" href="plant-compendium">
                         📖 Plant Compendium
                     </NavLink>
                 </div>
@@ -48,6 +40,15 @@
                     <NavLink class="nav-link" href="#">
                         🛠️ Maintenance
                     </NavLink>
+                </div>
+                <div class="nav-item">
+                    <form action="Account/Logout" method="post">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                        <button type="submit" class="nav-link">
+                            🚪 Logout
+                        </button>
+                    </form>
                 </div>
             </Authorized>
             <NotAuthorized>

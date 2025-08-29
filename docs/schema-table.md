@@ -1,10 +1,15 @@
 ## Entities
+
+### `ApplicationUser`
+Extends built-in .NET Core Identity framework `IdentityUser` class. 
+
 ### `Plant`
 Represents an **individual plant**. Contains instance-specific information and references a shared plant species
 
 | Attribute | Type | Nullable | Description | Example |
 | - | - | - | - | - |
 | `id` | `int` | NO | Primary key | 15 |
+| `user_id` | `int` | NO | FK to [ApplicationUser](#applicationuser) | 0 |
 | `species_id` | `int` | NO | FK to [PlantSpecies](#plantspecies) | 1 |
 | `name` | `string` | YES | Given/nickname for the plant | "Big Fatty" |
 | `date_acquired` | `datetime` | YES | Date acquired | 2025-08-14T14:30:45Z |
@@ -32,6 +37,7 @@ Logical grouping of plants (e.g., location, category).
 | Attribute | Type | Nullable | Description | Example |
 | - | - | - | - | - |
 | `id` | `int` | NO | Primary key | 3 |
+| `user_id` | `int` | NO | FK to [ApplicationUser](#applicationuser) | 0 |
 | `name` | `string` | NO | Group name | "Location: Plant Cart" |
 
 ---
@@ -53,6 +59,7 @@ An **action** is a type of care or maintenance performed on a plant (e.g., water
 | Attribute | Type | Nullable | Description | Example |
 | - | - | - | - | - |
 | `id` | `int` | NO | Primary key | 4 |
+| `user_id` | `int` | NO | FK to [ApplicationUser](#applicationuser) | 0 |
 | `name` | `string` | NO | Action name | Water |
 | `description` | `string` | YES | Action description | "Give the plant some water" |
 
@@ -64,6 +71,7 @@ Records **which actions** were performed on **which plants or groups**
 | Attribute | Type | Nullable | Description | Example |
 | - | - | - | - | - |
 | `id` | `int` | NO | Primary key | 22 |
+| `user_id` | `int` | NO | FK to [ApplicationUser](#applicationuser) | 0 |
 | `action_id` | `int` | NO | FK to [Action](#action) | 4 |
 | `plant_id` | `int` | YES | FK to [Plant](#plant) | NULL |
 | `group_id` | `int` | YES | FK to [Group](#group) | 3 |
@@ -102,6 +110,7 @@ Represents a **tool** used to complete an action (e.g., “warm water” for a w
 | Attribute | Type | Nullable | Description | Example |
 | - | - | - | - | - |
 | `id` | `int` | NO | Primary key | 5 |
+| `user_id` | `int` | NO | FK to [ApplicationUser](#applicationuser) | 0 |
 | `name` | `string` | NO | Tool name | Warm Water |
 | `description` | `string` | YES | Tool description | "Like bath water" |
 
@@ -147,6 +156,7 @@ Material used as the substrate in which a [Plant](#plant) is grown
 | Attribute | Type | Nullable | Description | Example |
 | - | - | - | - | - |
 | `id` | `int` | NO | Primary key | 8 |
+| `user_id` | `int` | NO | FK to [ApplicationUser](#applicationuser) | 0 |
 | `name` | `string` | NO | Given name | "Coco Coir" |
 | `description` | `string` | YES | Short description | "good aeration and drainage" |
 | `water_retention` | `int` | YES | Relative rating (1–5) of water retention capacity | 2 | 
