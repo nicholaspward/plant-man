@@ -1,177 +1,86 @@
-## Entities
+# Plant-Man Minimal Schema
 
-### `ApplicationUser`
-Extends built-in .NET Core Identity framework `IdentityUser` class. 
+This is the current working schema for the fresh React + Minimal API baseline.
 
-### `Plant`
-Represents an **individual plant**. Contains instance-specific information and references a shared plant species
+## `PlantTaxon`
 
-| Attribute | Type | Nullable | Description | Example |
-| - | - | - | - | - |
-| `id` | `int` | NO | Primary key | 15 |
-| `user_id` | `int` | NO | FK to [ApplicationUser](#applicationuser) | 0 |
-| `species_id` | `int` | NO | FK to [PlantSpecies](#plantspecies) | 1 |
-| `name` | `string` | YES | Given/nickname for the plant | "Big Fatty" |
-| `date_acquired` | `datetime` | YES | Date acquired | 2025-08-14T14:30:45Z |
+Reference data for a plant taxon. This may represent a species, cultivar, variety, hybrid, or other useful identification level.
 
----
+| Field | Type | Required | Notes |
+| - | - | - | - |
+| `id` | `int` | Yes | Primary key |
+| `name` | `string` | Yes | Common name |
+| `genus` | `string` | Yes | Botanical genus |
+| `species` | `string` | Yes | Botanical species |
+| `cultivar` | `string` | No | Optional cultivar |
+| `variety` | `string` | No | Optional variety |
+| `authority` | `string` | No | Optional authority |
 
-### `PlantSpecies`
-Represents **species-level data**. Shared, mostly static characteristics for plants of the same type
+## `Plant`
 
-| Attribute | Type | Nullable | Description | Example |
-| - | - | - | - | - |
-| `id` | `int` | NO | Primary key | 1 |
-| `name` | `string` | NO | Common name | Sunflower |
-| `genus` | `string` | NO | Genus | *Helianthus* |
-| `species` | `string` | NO | Species | *annuus* |
-| `cultivar` | `string` | YES | Cultivar | |
-| `variety` | `string` | YES | Variety | |
-| `authority` | `string` | YES | Authority name | L. |
+A plant owned or tracked by the user.
 
----
+| Field | Type | Required | Notes |
+| - | - | - | - |
+| `id` | `int` | Yes | Primary key |
+| `taxon_id` | `int` | Yes | Foreign key to `PlantTaxon` |
+| `nickname` | `string` | Yes | User-facing plant name |
+| `location` | `string` | Yes | Where the plant lives |
+| `last_watered_on` | `date` | No | Last watering date |
+| `water_every_days` | `int` | Yes | Simple watering interval |
 
-### `Group`
-Logical grouping of plants (e.g., location, category).
+## `ActionLog`
 
-| Attribute | Type | Nullable | Description | Example |
-| - | - | - | - | - |
-| `id` | `int` | NO | Primary key | 3 |
-| `user_id` | `int` | NO | FK to [ApplicationUser](#applicationuser) | 0 |
-| `name` | `string` | NO | Group name | "Location: Plant Cart" |
+A record of care performed for a plant.
 
----
+| Field | Type | Required | Notes |
+| - | - | - | - |
+| `id` | `int` | Yes | Primary key |
+| `plant_id` | `int` | Yes | Foreign key to `Plant` |
+| `action` | `string` | Yes | Care action, such as `Water` |
+| `notes` | `string` | No | Optional observation |
+| `performed_on` | `date` | Yes | Date care was completed |
 
-### `PlantGroup`
-**Junction table** implementing a many-to-many relationship between [Plant](#plant) and [Group](#group)
+## `CareAction`
 
-| Attribute | Type | Nullable | Description | Example |
-| - | - | - | - | - |
-| `id` | `int` | NO | Primary key | 1 |
-| `group_id` | `int` | NO | FK to [Group](#group) | 3 |
-| `plant_id` | `int` | NO | FK to [Plant](#plant) | 15 |
+A configurable type of care the user can log for a plant, such as watering, repotting, fertilizing, pruning, or inspection.
 
----
+| Field | Type | Required | Notes |
+| - | - | - | - |
+| `id` | `int` | Yes | Primary key |
+| `name` | `string` | Yes | User-facing action name |
+| `description` | `string` | No | Optional explanation of the action |
+| `is_enabled` | `bool` | Yes | Whether the action is available for use |
 
-### `Action`
-An **action** is a type of care or maintenance performed on a plant (e.g., watering, fertilizing, pruning)
+## `ActionResource`
 
-| Attribute | Type | Nullable | Description | Example |
-| - | - | - | - | - |
-| `id` | `int` | NO | Primary key | 4 |
-| `user_id` | `int` | NO | FK to [ApplicationUser](#applicationuser) | 0 |
-| `name` | `string` | NO | Action name | Water |
-| `description` | `string` | YES | Action description | "Give the plant some water" |
+A resource used while performing an action. This can be a consumable, material, product, piece of equipment, container, light, or other item relevant to the action.
 
----
+| Field | Type | Required | Notes |
+| - | - | - | - |
+| `id` | `int` | Yes | Primary key |
+| `name` | `string` | Yes | Resource name |
+| `category` | `string` | No | Optional grouping, such as `Fertilizer`, `Medium`, `Treatment`, `Equipment`, or `Container` |
+| `notes` | `string` | No | Optional details |
+| `is_enabled` | `bool` | Yes | Whether the resource is available for use |
 
-### `ActionLog`
-Records **which actions** were performed on **which plants or groups**
+## `ActionLogResource`
 
-| Attribute | Type | Nullable | Description | Example |
-| - | - | - | - | - |
-| `id` | `int` | NO | Primary key | 22 |
-| `user_id` | `int` | NO | FK to [ApplicationUser](#applicationuser) | 0 |
-| `action_id` | `int` | NO | FK to [Action](#action) | 4 |
-| `plant_id` | `int` | YES | FK to [Plant](#plant) | NULL |
-| `group_id` | `int` | YES | FK to [Group](#group) | 3 |
-| `plan_id` | `int` | YES | FK to [MaintenancePlan](#maintenanceplan) | NULL |
-| `notes` | `string` | YES | Notes on the action performed | "Dumped 500 gallons of electrolytes" |
+Join data connecting an action log to the resources used during that action.
 
----
+| Field | Type | Required | Notes |
+| - | - | - | - |
+| `action_log_id` | `int` | Yes | Foreign key to `ActionLog` |
+| `action_resource_id` | `int` | Yes | Foreign key to `ActionResource` |
+| `quantity` | `decimal` | No | Optional amount used |
+| `unit` | `string` | No | Optional unit, such as `ml`, `tbsp`, or `g` |
 
-### `MaintenancePlan`
-Defines a **recurring set of actions** to be applied to a plant or group (e.g., “Water every 15 days”)
+## Deferred Ideas
 
-| Attribute | Type | Nullable | Description | Example |
-| - | - | - | - | - |
-| `id` | `int` | NO | Primary key | 7 |
-| `plant_id` | `int` | YES | FK to [Plant](#plant) | NULL |
-| `group_id` | `int` | YES | FK to [Group](#group) | 3 |
-| `maintenance_plan_action_id` | `int` | NO | FK to [MaintenancePlanAction](#maintenanceplanaction) | 11 |
+These concepts are still promising, but they are intentionally out of the first working baseline:
 
----
-
-### `MaintenancePlanAction`
-Links a [MaintenancePlan](#maintenanceplan) to the [Action](#action) to perform and specifies a schedule
-
-| Attribute | Type | Nullable | Description | Example |
-| - | - | - | - | - |
-| `id` | `int` | NO | Primary key | 11 |
-| `maintenance_plan_id` | `int` | NO | FK to [MaintenancePlan](#maintenanceplan) | 7 |
-| `action_id` | `int` | NO | FK to [Action](#action) | 4 |
-| `schedule` | `string` | NO | Execution interval (CRON format) | `0 0 */2 * *` |
-
----
-
-### `Tool`
-Represents a **tool** used to complete an action (e.g., “warm water” for a watering action)
-
-| Attribute | Type | Nullable | Description | Example |
-| - | - | - | - | - |
-| `id` | `int` | NO | Primary key | 5 |
-| `user_id` | `int` | NO | FK to [ApplicationUser](#applicationuser) | 0 |
-| `name` | `string` | NO | Tool name | Warm Water |
-| `description` | `string` | YES | Tool description | "Like bath water" |
-
----
-
-### `ToolAction`
-**Junction table** implementing a many-to-many relationship between [Tool](#tool) and [Action](#action)
-
-| Attribute | Type | Nullable | Description | Example |
-| - | - | - | - | - |
-| `id` | `int` | NO | Primary key | 2 |
-| `tool_id` | `int` | NO | FK to [Tool](#tool) | 5 |
-| `action_id` | `int` | NO | FK to [Action](#action) | 4 |
-
----
-
-### `ToolAttribute`
-Defines a **custom attribute** of a tool (e.g., “pH”, “temperature”)
-
-| Attribute | Type | Nullable | Description | Example |
-| - | - | - | - | - |
-| `id` | `int` | NO | Primary key | 8 |
-| `name` | `string` | NO | Attribute name | Acidity |
-| `description` | `string` | YES | Description of attribute | "Water acidity, measured in pH" |
-
----
-
-### `ToolAttributeValue`
-Stores the value of a specific [ToolAttribute](#toolattribute) for a given [Tool](#tool)
-
-| Attribute | Type | Nullable | Description | Example |
-| - | - | - | - | - |
-| `id` | `int` | NO | Primary key | 14 |
-| `tool_attribute_id` | `int` | NO | FK to [ToolAttribute](#toolattribute) | 8 |
-| `tool_id` | `int` | NO | FK to [Tool](#tool) | 5 |
-| `value_string` | `string` | YES | Text value | "Slightly acidic" |
-| `value_number` | `float` | YES | Numeric value | 7.0 |
-
-
-### `GrowMedium`
-Material used as the substrate in which a [Plant](#plant) is grown
-
-| Attribute | Type | Nullable | Description | Example |
-| - | - | - | - | - |
-| `id` | `int` | NO | Primary key | 8 |
-| `user_id` | `int` | NO | FK to [ApplicationUser](#applicationuser) | 0 |
-| `name` | `string` | NO | Given name | "Coco Coir" |
-| `description` | `string` | YES | Short description | "good aeration and drainage" |
-| `water_retention` | `int` | YES | Relative rating (1–5) of water retention capacity | 2 | 
-| `aeration` | `int` | YES | Relative rating (1–5) of aeration potential | 5 |
-
----
-
-### `GrowMediumBlend`
-Enables composing custom blends of [GrowMedium](#growmedium) 
-
-| Attribute | Type | Nullable | Description | Example |
-| - | - | - | - | - |
-| `id` | `int` | NO | Primary key | 2 |
-| `parent_id` | `int` | NO | Foreign key | 12 |
-| `child_id` | `int` | NO | Foreign key | 11 |
-| `proportion` | `float` | NO | Fractional contribution of the child medium to the parent blend (0–1) | 0.2 |
-
-
+- user accounts
+- groups or rooms
+- grow media and blends
+- recurring schedules beyond a simple watering interval
+- richer taxon profiles

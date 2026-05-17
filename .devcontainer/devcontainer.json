@@ -1,0 +1,49 @@
+{
+  "name": "Plant-Man",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/node:2.0.0": {
+      "version": "lts"
+    }
+  },
+  "remoteUser": "vscode",
+  "mounts": [
+    "type=bind,source=${localEnv:USERPROFILE}/.codex,target=/home/vscode/.codex"
+  ],
+  "forwardPorts": [5173, 7186, 5074],
+  "portsAttributes": {
+    "5173": {
+      "label": "Vite frontend",
+      "onAutoForward": "notify"
+    },
+    "7186": {
+      "label": ".NET API HTTPS",
+      "onAutoForward": "silent"
+    },
+    "5074": {
+      "label": ".NET API HTTP",
+      "onAutoForward": "silent"
+    }
+  },
+  "postCreateCommand": "dotnet restore plant-manager.sln && cd plant-manager-web && npm install",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "editor.formatOnSave": true,
+        "files.eol": "\n"
+      },
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-dotnettools.csdevkit",
+        "ms-dotnettools.csharp",
+        "ms-azuretools.vscode-docker",
+        "mtxr.sqltools",
+        "mtxr.sqltools-driver-sqlite"
+      ]
+    }
+  }
+}
