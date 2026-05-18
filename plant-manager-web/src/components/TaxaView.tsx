@@ -1,4 +1,4 @@
-import { BookOpen, Edit3, Plus, Save, Trash2, X } from 'lucide-react';
+import { Edit3, Plus, Save, Trash2, X } from 'lucide-react';
 import type { PlantTaxon } from '../domain';
 import type { TaxonFormState } from '../form-state';
 import { formatTaxon } from '../form-state';
@@ -7,6 +7,7 @@ type TaxaViewProps = {
   activeTaxonName?: string;
   error: string | null;
   form: TaxonFormState;
+  isEditorOpen: boolean;
   isLoading: boolean;
   isSaving: boolean;
   taxa: PlantTaxon[];
@@ -22,6 +23,7 @@ export function TaxaView({
   activeTaxonName,
   error,
   form,
+  isEditorOpen,
   isLoading,
   isSaving,
   taxa,
@@ -48,6 +50,7 @@ export function TaxaView({
         </button>
       </section>
 
+      {isEditorOpen ? (
       <section className="editor-panel" aria-labelledby="taxon-editor-heading">
         <div className="section-heading">
           <div>
@@ -114,6 +117,7 @@ export function TaxaView({
           </button>
         </div>
       </section>
+      ) : null}
 
       <section className="section" aria-labelledby="taxa-list-heading">
         <div className="section-heading">
@@ -127,9 +131,6 @@ export function TaxaView({
 
           {taxa.map((taxon) => (
             <article className="plant-row" key={taxon.id}>
-              <div className="plant-mark">
-                <BookOpen size={20} />
-              </div>
               <div>
                 <h3>{taxon.name}</h3>
                 <p>{formatTaxon(taxon)}</p>

@@ -84,7 +84,7 @@ namespace plant_manager.Endpoints
                     return Results.NotFound();
                 }
 
-                var hasLogs = await db.ActionLogs.AnyAsync(log => log.Action.ToLower() == action.Name.ToLower());
+                var hasLogs = await db.ActionLogs.AnyAsync(log => log.CareActionId == id);
                 if (hasLogs)
                 {
                     action.IsEnabled = false;

@@ -12,17 +12,26 @@ namespace plant_manager.Endpoints
             {
                 var plants = await db.Plants
                     .Include(plant => plant.Taxon)
+                    .Include(plant => plant.CareSchedules)
+                    .ThenInclude(schedule => schedule.CareAction)
+                    .Include(plant => plant.ActionLogs)
+                    .Include(plant => plant.Flags)
+                    .ThenInclude(flag => flag.Definition)
                     .OrderBy(plant => plant.Nickname)
-                    .Select(plant => PlantDto.FromPlant(plant))
                     .ToListAsync();
 
-                return Results.Ok(plants);
+                return Results.Ok(plants.Select(PlantDto.FromPlant));
             });
 
             app.MapGet("/api/plants/{id:int}", async (int id, ApplicationDbContext db) =>
             {
                 var plant = await db.Plants
                     .Include(item => item.Taxon)
+                    .Include(plant => plant.CareSchedules)
+                    .ThenInclude(schedule => schedule.CareAction)
+                    .Include(plant => plant.ActionLogs)
+                    .Include(plant => plant.Flags)
+                    .ThenInclude(flag => flag.Definition)
                     .FirstOrDefaultAsync(item => item.Id == id);
 
                 return plant is null
@@ -47,15 +56,20 @@ namespace plant_manager.Endpoints
                 {
                     Nickname = request.Nickname.Trim(),
                     Location = string.IsNullOrWhiteSpace(request.Location) ? "Unassigned" : request.Location.Trim(),
-                    TaxonId = request.TaxonId,
-                    LastWateredOn = request.LastWateredOn,
-                    WaterEveryDays = Math.Clamp(request.WaterEveryDays ?? 7, 1, 365)
+                    TaxonId = request.TaxonId
                 };
 
                 db.Plants.Add(plant);
                 await db.SaveChangesAsync();
 
                 plant.Taxon = taxon;
+                var scheduleError = await ApplyCareSchedules(plant, request.CareSchedules, db);
+                if (scheduleError is not null)
+                {
+                    return Results.BadRequest(new { error = scheduleError });
+                }
+
+                await db.SaveChangesAsync();
 
                 return Results.Created($"/api/plants/{plant.Id}", PlantDto.FromPlant(plant));
             });
@@ -69,6 +83,11 @@ namespace plant_manager.Endpoints
 
                 var plant = await db.Plants
                     .Include(item => item.Taxon)
+                    .Include(item => item.CareSchedules)
+                    .ThenInclude(schedule => schedule.CareAction)
+                    .Include(item => item.ActionLogs)
+                    .Include(item => item.Flags)
+                    .ThenInclude(flag => flag.Definition)
                     .FirstOrDefaultAsync(item => item.Id == id);
 
                 if (plant is null)
@@ -86,8 +105,11 @@ namespace plant_manager.Endpoints
                 plant.Location = string.IsNullOrWhiteSpace(request.Location) ? "Unassigned" : request.Location.Trim();
                 plant.TaxonId = request.TaxonId;
                 plant.Taxon = taxon;
-                plant.LastWateredOn = request.LastWateredOn;
-                plant.WaterEveryDays = Math.Clamp(request.WaterEveryDays ?? 7, 1, 365);
+                var scheduleError = await ApplyCareSchedules(plant, request.CareSchedules, db);
+                if (scheduleError is not null)
+                {
+                    return Results.BadRequest(new { error = scheduleError });
+                }
 
                 await db.SaveChangesAsync();
 
@@ -107,6 +129,75 @@ namespace plant_manager.Endpoints
 
                 return Results.NoContent();
             });
+        }
+
+        private static async Task<string?> ApplyCareSchedules(
+            Plant plant,
+            IReadOnlyList<SavePlantCareScheduleRequest>? requestedSchedules,
+            ApplicationDbContext db)
+        {
+            var schedules = requestedSchedules?.ToList();
+            if (schedules is null)
+            {
+                var waterAction = await db.CareActions
+                    .FirstOrDefaultAsync(action => action.Name.ToLower() == "water");
+                if (waterAction is null)
+                {
+                    return null;
+                }
+
+                schedules =
+                [
+                    new SavePlantCareScheduleRequest(
+                        waterAction.Id,
+                        7,
+                        true)
+                ];
+            }
+
+            var normalizedSchedules = schedules
+                .GroupBy(schedule => schedule.CareActionId)
+                .Select(group => group.First())
+                .Where(schedule => schedule.CareActionId > 0)
+                .ToList();
+            var actionIds = normalizedSchedules
+                .Select(schedule => schedule.CareActionId)
+                .ToList();
+            var actionsById = await db.CareActions
+                .Where(action => actionIds.Contains(action.Id))
+                .ToDictionaryAsync(action => action.Id);
+
+            if (actionsById.Count != actionIds.Count)
+            {
+                return "One or more care actions were not found.";
+            }
+
+            var requestedActionIds = actionIds.ToHashSet();
+            var schedulesToRemove = plant.CareSchedules
+                .Where(schedule => !requestedActionIds.Contains(schedule.CareActionId))
+                .ToList();
+            db.PlantCareSchedules.RemoveRange(schedulesToRemove);
+
+            foreach (var requestedSchedule in normalizedSchedules)
+            {
+                var schedule = plant.CareSchedules
+                    .FirstOrDefault(item => item.CareActionId == requestedSchedule.CareActionId);
+                if (schedule is null)
+                {
+                    schedule = new PlantCareSchedule
+                    {
+                        PlantId = plant.Id,
+                        CareActionId = requestedSchedule.CareActionId,
+                        CareAction = actionsById[requestedSchedule.CareActionId]
+                    };
+                    plant.CareSchedules.Add(schedule);
+                }
+
+                schedule.EveryDays = Math.Clamp(requestedSchedule.EveryDays ?? 7, 1, 365);
+                schedule.IsEnabled = requestedSchedule.IsEnabled;
+            }
+
+            return null;
         }
     }
 }

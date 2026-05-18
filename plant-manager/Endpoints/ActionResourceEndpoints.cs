@@ -87,6 +87,14 @@ namespace plant_manager.Endpoints
                     return Results.NotFound();
                 }
 
+                var hasLogs = await db.ActionLogResources.AnyAsync(logResource => logResource.ActionResourceId == id);
+                if (hasLogs)
+                {
+                    resource.IsEnabled = false;
+                    await db.SaveChangesAsync();
+                    return Results.Conflict(new { error = "Resource has care history, so it was disabled instead of deleted." });
+                }
+
                 db.ActionResources.Remove(resource);
                 await db.SaveChangesAsync();
 

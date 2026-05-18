@@ -1,35 +1,61 @@
-import { Leaf } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import type { CareStatus, Plant } from '../domain';
 
 const statusLabel: Record<CareStatus, string> = {
   due: 'Due',
   soon: 'Soon',
   ok: 'Ok',
+  unscheduled: 'Unscheduled',
 };
 
-export function PlantCard({ plant }: { plant: Plant }) {
+type PlantCardProps = {
+  plant: Plant;
+  onOpen?: (plant: Plant) => void;
+};
+
+export function PlantCard({ plant, onOpen }: PlantCardProps) {
   return (
     <article className="plant-card">
-      <div className="plant-card-top">
-        <div className="plant-mark">
-          <Leaf size={20} />
-        </div>
-        <span className={`status-pill ${plant.status}`}>
-          {statusLabel[plant.status]}
-        </span>
-      </div>
       <h3>{plant.nickname}</h3>
-      <p className="taxon">{plant.taxon}</p>
+      <div className="taxon">
+        <p>{plant.taxon}</p>
+        {plant.flags.filter((flag) => flag.resolvedOn === null).length > 0 ? (
+          <div className="flag-list">
+            {plant.flags
+              .filter((flag) => flag.resolvedOn === null)
+              .map((flag) => (
+                <span className="flag-chip" key={flag.id} style={{ backgroundColor: flag.color }}>
+                  {flag.name}
+                </span>
+              ))}
+          </div>
+        ) : null}
+      </div>
       <dl>
         <div>
           <dt>Location</dt>
           <dd>{plant.location}</dd>
         </div>
         <div>
-          <dt>Last watered</dt>
-          <dd>{plant.lastWatered}</dd>
+          <dt>Next care</dt>
+          <dd>{plant.nextCare}</dd>
         </div>
       </dl>
+      <div className="plant-card-actions">
+        <span className={`status-pill ${plant.status}`}>
+          {statusLabel[plant.status]}
+        </span>
+        {onOpen ? (
+          <button
+            className="icon-button compact"
+            type="button"
+            aria-label={`View ${plant.nickname}`}
+            onClick={() => onOpen(plant)}
+          >
+            <Eye size={17} />
+          </button>
+        ) : null}
+      </div>
     </article>
   );
 }

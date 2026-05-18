@@ -4,7 +4,10 @@ import type {
   CareAction,
   CareActionPayload,
   Plant,
+  AssignPlantFlagPayload,
   PlantPayload,
+  PlantFlagDefinition,
+  PlantFlagDefinitionPayload,
   PlantTaxon,
   PlantTaxonPayload,
 } from './domain';
@@ -13,8 +16,13 @@ export const emptyPlantForm = {
   nickname: '',
   taxonId: '',
   location: '',
-  lastWateredOn: '',
-  waterEveryDays: '7',
+  careSchedules: [] as PlantCareScheduleFormState[],
+};
+
+export type PlantCareScheduleFormState = {
+  careActionId: string;
+  everyDays: string;
+  isEnabled: boolean;
 };
 
 export const emptyTaxonForm = {
@@ -39,27 +47,53 @@ export const emptyResourceForm = {
   isEnabled: true,
 };
 
+export const emptyFlagDefinitionForm = {
+  name: '',
+  category: 'Pest',
+  color: '#f2f2f2',
+  isEnabled: true,
+};
+
+export const emptyPlantFlagForm = {
+  plantFlagDefinitionId: '',
+  severity: 'medium',
+  startedOn: '',
+  notes: '',
+};
+
+export type CareLogResourceFormState = {
+  actionResourceId: string;
+  quantity: string;
+  unit: string;
+};
+
 export const emptyCareLogForm = {
   plantId: '',
-  action: 'Water',
+  careActionId: '',
   performedOn: '',
   notes: '',
+  resources: [] as CareLogResourceFormState[],
 };
 
 export type PlantFormState = typeof emptyPlantForm;
 export type TaxonFormState = typeof emptyTaxonForm;
 export type ActionFormState = typeof emptyActionForm;
 export type ResourceFormState = typeof emptyResourceForm;
+export type FlagDefinitionFormState = typeof emptyFlagDefinitionForm;
+export type PlantFlagFormState = typeof emptyPlantFlagForm;
 export type CareLogFormState = typeof emptyCareLogForm;
-export type View = 'home' | 'plants' | 'taxa' | 'actions' | 'resources';
+export type View = 'home' | 'plants' | 'taxa' | 'actions' | 'resources' | 'flags';
 
 export function toPlantForm(plant: Plant): PlantFormState {
   return {
     nickname: plant.nickname,
     taxonId: String(plant.taxonId),
     location: plant.location,
-    lastWateredOn: plant.lastWateredOn ?? '',
-    waterEveryDays: String(plant.waterEveryDays),
+    careSchedules: plant.careSchedules.map((schedule) => ({
+      careActionId: String(schedule.careActionId),
+      everyDays: String(schedule.everyDays),
+      isEnabled: schedule.isEnabled,
+    })),
   };
 }
 
@@ -68,8 +102,11 @@ export function toPlantPayload(form: PlantFormState): PlantPayload {
     nickname: form.nickname.trim(),
     taxonId: Number(form.taxonId),
     location: form.location.trim(),
-    lastWateredOn: form.lastWateredOn || null,
-    waterEveryDays: Number(form.waterEveryDays),
+    careSchedules: form.careSchedules.map((schedule) => ({
+      careActionId: Number(schedule.careActionId),
+      everyDays: Number(schedule.everyDays),
+      isEnabled: schedule.isEnabled,
+    })),
   };
 }
 
@@ -126,6 +163,33 @@ export function toResourcePayload(form: ResourceFormState): ActionResourcePayloa
     category: form.category.trim() || null,
     notes: form.notes.trim() || null,
     isEnabled: form.isEnabled,
+  };
+}
+
+export function toFlagDefinitionForm(flag: PlantFlagDefinition): FlagDefinitionFormState {
+  return {
+    name: flag.name,
+    category: flag.category,
+    color: flag.color,
+    isEnabled: flag.isEnabled,
+  };
+}
+
+export function toFlagDefinitionPayload(form: FlagDefinitionFormState): PlantFlagDefinitionPayload {
+  return {
+    name: form.name.trim(),
+    category: form.category.trim() || null,
+    color: form.color.trim() || null,
+    isEnabled: form.isEnabled,
+  };
+}
+
+export function toPlantFlagPayload(form: PlantFlagFormState): AssignPlantFlagPayload {
+  return {
+    plantFlagDefinitionId: Number(form.plantFlagDefinitionId),
+    severity: form.severity || null,
+    startedOn: form.startedOn || null,
+    notes: form.notes.trim() || null,
   };
 }
 

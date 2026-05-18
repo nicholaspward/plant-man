@@ -1,4 +1,4 @@
-import { Edit3, Package, Plus, Save, Trash2, X } from 'lucide-react';
+import { Edit3, Plus, Save, Trash2, X } from 'lucide-react';
 import type { ActionResource } from '../domain';
 import type { ResourceFormState } from '../form-state';
 
@@ -6,6 +6,7 @@ type ResourcesViewProps = {
   activeResourceName?: string;
   error: string | null;
   form: ResourceFormState;
+  isEditorOpen: boolean;
   isLoading: boolean;
   isSaving: boolean;
   onCancel: () => void;
@@ -21,6 +22,7 @@ export function ResourcesView({
   activeResourceName,
   error,
   form,
+  isEditorOpen,
   isLoading,
   isSaving,
   onCancel,
@@ -49,6 +51,7 @@ export function ResourcesView({
         </button>
       </section>
 
+      {isEditorOpen ? (
       <section className="editor-panel" aria-labelledby="resource-editor-heading">
         <div className="section-heading">
           <div>
@@ -102,6 +105,7 @@ export function ResourcesView({
           </button>
         </div>
       </section>
+      ) : null}
 
       <section className="section" aria-labelledby="resources-list-heading">
         <div className="section-heading">
@@ -115,9 +119,6 @@ export function ResourcesView({
 
           {resources.map((resource) => (
             <article className="plant-row" key={resource.id}>
-              <div className="plant-mark">
-                <Package size={20} />
-              </div>
               <div>
                 <h3>{resource.name}</h3>
                 <p>

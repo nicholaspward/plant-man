@@ -43,6 +43,7 @@ The container runs dependency setup automatically:
 
 ```bash
 dotnet restore plant-manager.sln
+dotnet tool restore
 cd plant-manager-web && npm install
 ```
 
@@ -81,11 +82,13 @@ SQLite is configured in `plant-manager/appsettings.json`:
 "DefaultConnection": "Data Source=App_Data/plant-man.db"
 ```
 
-On startup, the API creates the database with `EnsureCreated()` and seeds a few starter plants. This keeps the project easy to test while the model is still young.
+On startup, the API applies EF Core migrations with `Migrate()` and seeds a few starter plants. This keeps the schema versioned while the project is still easy to test.
 
 The default starter taxons are tracked in [docs/starter-taxa.md](docs/starter-taxa.md).
 
 Local SQLite files are ignored by Git.
+
+If you have a local database created before migrations were added, delete `plant-manager/App_Data/plant-man.db` and restart the API to recreate it from migrations.
 
 ## Project Structure
 
@@ -119,14 +122,24 @@ plant-manager-web/          React + Vite frontend
 - `POST /api/action-resources`
 - `PUT /api/action-resources/{id}`
 - `DELETE /api/action-resources/{id}`
-- `GET /api/care-tasks/today`
+- `GET /api/care-tasks/upcoming`
+- `GET /api/action-logs`
 - `POST /api/action-logs`
+- `PUT /api/action-logs/{id}`
+- `DELETE /api/action-logs/{id}`
 
 Example action log request:
 
 ```json
 {
   "plantId": 1,
-  "action": "Water"
+  "careActionId": 1,
+  "resources": [
+    {
+      "actionResourceId": 1,
+      "quantity": 250,
+      "unit": "ml"
+    }
+  ]
 }
 ```

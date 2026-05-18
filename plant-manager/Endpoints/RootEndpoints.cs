@@ -15,7 +15,7 @@ namespace plant_manager.Endpoints
                     "/api/plant-taxa",
                     "/api/care-actions",
                     "/api/action-resources",
-                    "/api/care-tasks/today",
+                    "/api/care-tasks/upcoming",
                     "/api/action-logs"
                 }
             }));

@@ -26,8 +26,18 @@ A plant owned or tracked by the user.
 | `taxon_id` | `int` | Yes | Foreign key to `PlantTaxon` |
 | `nickname` | `string` | Yes | User-facing plant name |
 | `location` | `string` | Yes | Where the plant lives |
-| `last_watered_on` | `date` | No | Last watering date |
-| `water_every_days` | `int` | Yes | Simple watering interval |
+
+## `PlantCareSchedule`
+
+A per-plant recurring schedule for one care action.
+
+| Field | Type | Required | Notes |
+| - | - | - | - |
+| `id` | `int` | Yes | Primary key |
+| `plant_id` | `int` | Yes | Foreign key to `Plant` |
+| `care_action_id` | `int` | Yes | Foreign key to `CareAction` |
+| `every_days` | `int` | Yes | Recurrence interval |
+| `is_enabled` | `bool` | Yes | Whether this schedule contributes to care tasks |
 
 ## `ActionLog`
 
@@ -37,7 +47,8 @@ A record of care performed for a plant.
 | - | - | - | - |
 | `id` | `int` | Yes | Primary key |
 | `plant_id` | `int` | Yes | Foreign key to `Plant` |
-| `action` | `string` | Yes | Care action, such as `Water` |
+| `care_action_id` | `int` | Yes | Foreign key to `CareAction` |
+| `action_name_snapshot` | `string` | Yes | Historical display name, such as `Water`, preserved if the action is renamed |
 | `notes` | `string` | No | Optional observation |
 | `performed_on` | `date` | Yes | Date care was completed |
 
@@ -82,5 +93,4 @@ These concepts are still promising, but they are intentionally out of the first 
 - user accounts
 - groups or rooms
 - grow media and blends
-- recurring schedules beyond a simple watering interval
 - richer taxon profiles

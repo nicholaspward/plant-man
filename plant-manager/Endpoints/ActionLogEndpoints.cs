@@ -12,18 +12,13 @@ namespace plant_manager.Endpoints
             {
                 var logs = await db.ActionLogs
                     .Include(log => log.Plant)
+                    .Include(log => log.Resources)
+                    .ThenInclude(resource => resource.ActionResource)
                     .OrderByDescending(log => log.PerformedOn)
                     .ThenByDescending(log => log.Id)
-                    .Select(log => new ActionLogDto(
-                        log.Id,
-                        log.PlantId,
-                        log.Plant.Nickname,
-                        log.Action,
-                        log.Notes,
-                        log.PerformedOn))
                     .ToListAsync();
 
-                return Results.Ok(logs);
+                return Results.Ok(logs.Select(ActionLogDto.FromActionLog));
             });
 
             app.MapPost("/api/action-logs", async (CreateActionLogRequest request, ApplicationDbContext db) =>
@@ -34,24 +29,34 @@ namespace plant_manager.Endpoints
                     return Results.BadRequest(new { error = "Plant was not found." });
                 }
 
-                var action = string.IsNullOrWhiteSpace(request.Action)
-                    ? "Water"
-                    : request.Action.Trim();
+                var action = await db.CareActions.FindAsync(request.CareActionId);
+                if (action is null)
+                {
+                    return Results.BadRequest(new { error = "Care action was not found." });
+                }
+
+                if (!action.IsEnabled)
+                {
+                    return Results.BadRequest(new { error = "Disabled actions cannot be logged." });
+                }
 
                 var performedOn = request.PerformedOn ?? DateOnly.FromDateTime(DateTime.UtcNow);
+                var (resources, resourceError) = await BuildLogResources(request.Resources, db);
+                if (resourceError is not null)
+                {
+                    return Results.BadRequest(new { error = resourceError });
+                }
 
                 var log = new ActionLog
                 {
                     PlantId = plant.Id,
-                    Action = action,
+                    CareActionId = action.Id,
+                    CareAction = action,
+                    ActionNameSnapshot = action.Name,
                     Notes = request.Notes?.Trim(),
-                    PerformedOn = performedOn
+                    PerformedOn = performedOn,
+                    Resources = resources
                 };
-
-                if (string.Equals(action, "Water", StringComparison.OrdinalIgnoreCase))
-                {
-                    plant.LastWateredOn = performedOn;
-                }
 
                 db.ActionLogs.Add(log);
                 await db.SaveChangesAsync();
@@ -60,6 +65,116 @@ namespace plant_manager.Endpoints
 
                 return Results.Created($"/api/action-logs/{log.Id}", ActionLogDto.FromActionLog(log));
             });
+
+            app.MapPut("/api/action-logs/{id:int}", async (int id, UpdateActionLogRequest request, ApplicationDbContext db) =>
+            {
+                var log = await db.ActionLogs
+                    .Include(item => item.Plant)
+                    .Include(item => item.Resources)
+                    .FirstOrDefaultAsync(item => item.Id == id);
+                if (log is null)
+                {
+                    return Results.NotFound();
+                }
+
+                var oldPlantId = log.PlantId;
+                var oldCareActionId = log.CareActionId;
+
+                var plant = await db.Plants.FindAsync(request.PlantId);
+                if (plant is null)
+                {
+                    return Results.BadRequest(new { error = "Plant was not found." });
+                }
+
+                var action = await db.CareActions.FindAsync(request.CareActionId);
+                if (action is null)
+                {
+                    return Results.BadRequest(new { error = "Care action was not found." });
+                }
+
+                if (!action.IsEnabled)
+                {
+                    return Results.BadRequest(new { error = "Disabled actions cannot be logged." });
+                }
+
+                var (resources, resourceError) = await BuildLogResources(request.Resources, db);
+                if (resourceError is not null)
+                {
+                    return Results.BadRequest(new { error = resourceError });
+                }
+
+                db.ActionLogResources.RemoveRange(log.Resources);
+
+                log.PlantId = plant.Id;
+                log.Plant = plant;
+                log.CareActionId = action.Id;
+                log.CareAction = action;
+                log.ActionNameSnapshot = action.Name;
+                log.Notes = request.Notes?.Trim();
+                log.PerformedOn = request.PerformedOn;
+                log.Resources = resources;
+
+                await db.SaveChangesAsync();
+
+                return Results.Ok(ActionLogDto.FromActionLog(log));
+            });
+
+            app.MapDelete("/api/action-logs/{id:int}", async (int id, ApplicationDbContext db) =>
+            {
+                var log = await db.ActionLogs.FindAsync(id);
+                if (log is null)
+                {
+                    return Results.NotFound();
+                }
+
+                db.ActionLogs.Remove(log);
+                await db.SaveChangesAsync();
+
+                return Results.NoContent();
+            });
         }
+
+        private static async Task<(List<ActionLogResource> Resources, string? Error)> BuildLogResources(
+            IReadOnlyList<ActionLogResourceRequest>? requestResources,
+            ApplicationDbContext db)
+        {
+            var requestedResources = requestResources?
+                .GroupBy(resource => resource.ActionResourceId)
+                .Select(group => group.First())
+                .ToList() ?? [];
+
+            if (requestedResources.Any(resource => resource.Quantity < 0))
+            {
+                return ([], "Resource quantities cannot be negative.");
+            }
+
+            var resourceIds = requestedResources
+                .Select(resource => resource.ActionResourceId)
+                .ToList();
+            var resourcesById = await db.ActionResources
+                .Where(resource => resourceIds.Contains(resource.Id))
+                .ToDictionaryAsync(resource => resource.Id);
+
+            if (resourcesById.Count != resourceIds.Count)
+            {
+                return ([], "One or more resources were not found.");
+            }
+
+            if (resourcesById.Values.Any(resource => !resource.IsEnabled))
+            {
+                return ([], "Disabled resources cannot be logged.");
+            }
+
+            return (requestedResources
+                .Select(resource => new ActionLogResource
+                {
+                    ActionResourceId = resource.ActionResourceId,
+                    ActionResource = resourcesById[resource.ActionResourceId],
+                    Quantity = resource.Quantity,
+                    Unit = string.IsNullOrWhiteSpace(resource.Unit) ? null : resource.Unit.Trim()
+                })
+                .ToList(), null);
+        }
+
     }
 }

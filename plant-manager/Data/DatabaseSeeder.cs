@@ -26,6 +26,15 @@ namespace plant_manager.Data
             new() { Name = "Pruners", Category = "Equipment", Notes = "Cutting tool for pruning or cleanup." }
         ];
 
+        private static readonly PlantFlagDefinition[] StarterFlagDefinitions =
+        [
+            new() { Name = "Spider mites", Category = "Pest", Color = "#ffe4e1" },
+            new() { Name = "Fungus gnats", Category = "Pest", Color = "#fff4cc" },
+            new() { Name = "Quarantine", Category = "Workflow", Color = "#e8eef8" },
+            new() { Name = "Needs repotting", Category = "Condition", Color = "#e9f5e7" },
+            new() { Name = "Watch closely", Category = "Workflow", Color = "#eeeeee" }
+        ];
+
         private static readonly StarterTaxon[] StarterTaxa =
         [
             new("Chinese Money Plant", "Pilea", "peperomioides"),
@@ -50,47 +59,12 @@ namespace plant_manager.Data
 
         public static void Seed(ApplicationDbContext db)
         {
-            EnsureCareActionTable(db);
-            EnsureActionResourceTable(db);
             SeedCareActions(db);
             SeedActionResources(db);
+            SeedPlantFlags(db);
             SeedStarterTaxa(db);
             SeedStarterPlants(db);
-        }
-
-        private static void EnsureCareActionTable(ApplicationDbContext db)
-        {
-            db.Database.ExecuteSqlRaw("""
-                CREATE TABLE IF NOT EXISTS "CareActions" (
-                    "Id" INTEGER NOT NULL CONSTRAINT "PK_CareActions" PRIMARY KEY AUTOINCREMENT,
-                    "Name" TEXT NOT NULL,
-                    "Description" TEXT NULL,
-                    "IsEnabled" INTEGER NOT NULL
-                );
-                """);
-
-            db.Database.ExecuteSqlRaw("""
-                CREATE UNIQUE INDEX IF NOT EXISTS "IX_CareActions_Name"
-                ON "CareActions" ("Name");
-                """);
-        }
-
-        private static void EnsureActionResourceTable(ApplicationDbContext db)
-        {
-            db.Database.ExecuteSqlRaw("""
-                CREATE TABLE IF NOT EXISTS "ActionResources" (
-                    "Id" INTEGER NOT NULL CONSTRAINT "PK_ActionResources" PRIMARY KEY AUTOINCREMENT,
-                    "Name" TEXT NOT NULL,
-                    "Category" TEXT NULL,
-                    "Notes" TEXT NULL,
-                    "IsEnabled" INTEGER NOT NULL
-                );
-                """);
-
-            db.Database.ExecuteSqlRaw("""
-                CREATE UNIQUE INDEX IF NOT EXISTS "IX_ActionResources_Name"
-                ON "ActionResources" ("Name");
-                """);
+            SeedDefaultCareSchedules(db);
         }
 
         private static void SeedCareActions(ApplicationDbContext db)
@@ -119,6 +93,33 @@ namespace plant_manager.Data
             db.SaveChanges();
         }
 
+        private static void SeedDefaultCareSchedules(ApplicationDbContext db)
+        {
+            var waterAction = db.CareActions
+                .FirstOrDefault(action => action.Name == "Water");
+            if (waterAction is null)
+            {
+                return;
+            }
+
+            var plantsMissingWaterSchedule = db.Plants
+                .Include(plant => plant.CareSchedules)
+                .Where(plant => !plant.CareSchedules.Any(schedule => schedule.CareActionId == waterAction.Id))
+                .ToList();
+
+            foreach (var plant in plantsMissingWaterSchedule)
+            {
+                plant.CareSchedules.Add(new PlantCareSchedule
+                {
+                    CareActionId = waterAction.Id,
+                    EveryDays = 7,
+                    IsEnabled = true
+                });
+            }
+
+            db.SaveChanges();
+        }
+
         private static void SeedActionResources(ApplicationDbContext db)
         {
             var existingResourceNames = db.ActionResources
@@ -143,6 +144,33 @@ namespace plant_manager.Data
             }
 
             db.ActionResources.AddRange(missingResources);
+            db.SaveChanges();
+        }
+
+        private static void SeedPlantFlags(ApplicationDbContext db)
+        {
+            var existingFlagNames = db.PlantFlagDefinitions
+                .Select(flag => flag.Name)
+                .ToList();
+
+            var missingFlags = StarterFlagDefinitions
+                .Where(starterFlag => !existingFlagNames.Any(existingName =>
+                    string.Equals(existingName, starterFlag.Name, StringComparison.OrdinalIgnoreCase)))
+                .Select(starterFlag => new PlantFlagDefinition
+                {
+                    Name = starterFlag.Name,
+                    Category = starterFlag.Category,
+                    Color = starterFlag.Color,
+                    IsEnabled = starterFlag.IsEnabled
+                })
+                .ToList();
+
+            if (missingFlags.Count == 0)
+            {
+                return;
+            }
+
+            db.PlantFlagDefinitions.AddRange(missingFlags);
             db.SaveChanges();
         }
 
@@ -184,31 +212,69 @@ namespace plant_manager.Data
 
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-            db.Plants.AddRange(
-                new Plant
+            var starterPlants = new[]
+            {
+                new
                 {
-                    Nickname = "Pothos",
-                    Taxon = Taxon("Pothos"),
-                    Location = "Living room",
-                    LastWateredOn = today.AddDays(-7),
-                    WaterEveryDays = 7
+                    Plant = new Plant
+                    {
+                        Nickname = "Pothos",
+                        Taxon = Taxon("Pothos"),
+                        Location = "Living room"
+                    },
+                    InitialWateredOn = today.AddDays(-7),
+                    WaterIntervalDays = 7
                 },
-                new Plant
+                new
                 {
-                    Nickname = "Money Tree",
-                    Taxon = Taxon("Money Tree"),
-                    Location = "Bedroom",
-                    LastWateredOn = today.AddDays(-13),
-                    WaterEveryDays = 14
+                    Plant = new Plant
+                    {
+                        Nickname = "Money Tree",
+                        Taxon = Taxon("Money Tree"),
+                        Location = "Bedroom"
+                    },
+                    InitialWateredOn = today.AddDays(-13),
+                    WaterIntervalDays = 14
                 },
-                new Plant
+                new
                 {
-                    Nickname = "Chinese Money Plant",
-                    Taxon = Taxon("Chinese Money Plant"),
-                    Location = "Kitchen",
-                    LastWateredOn = today.AddDays(-2),
-                    WaterEveryDays = 6
+                    Plant = new Plant
+                    {
+                        Nickname = "Chinese Money Plant",
+                        Taxon = Taxon("Chinese Money Plant"),
+                        Location = "Kitchen"
+                    },
+                    InitialWateredOn = today.AddDays(-2),
+                    WaterIntervalDays = 6
+                }
+            };
+
+            db.Plants.AddRange(starterPlants.Select(starterPlant => starterPlant.Plant));
+            db.SaveChanges();
+
+            var waterAction = db.CareActions.FirstOrDefault(action => action.Name == "Water");
+            if (waterAction is null)
+            {
+                return;
+            }
+
+            foreach (var starterPlant in starterPlants)
+            {
+                starterPlant.Plant.CareSchedules.Add(new PlantCareSchedule
+                {
+                    CareActionId = waterAction.Id,
+                    EveryDays = starterPlant.WaterIntervalDays,
+                    IsEnabled = true
                 });
+                db.ActionLogs.Add(new ActionLog
+                {
+                    PlantId = starterPlant.Plant.Id,
+                    CareActionId = waterAction.Id,
+                    ActionNameSnapshot = waterAction.Name,
+                    Notes = "Starter watering history.",
+                    PerformedOn = starterPlant.InitialWateredOn
+                });
+            }
 
             db.SaveChanges();
         }

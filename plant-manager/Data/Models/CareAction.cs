@@ -7,5 +7,8 @@ namespace plant_manager.Data.Models
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
         public bool IsEnabled { get; set; } = true;
+
+        public List<ActionLog> ActionLogs { get; set; } = [];
+        public List<PlantCareSchedule> PlantCareSchedules { get; set; } = [];
     }
 }

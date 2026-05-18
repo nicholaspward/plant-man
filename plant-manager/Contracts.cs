@@ -6,15 +6,18 @@ namespace plant_manager
         string Nickname,
         int TaxonId,
         string? Location,
-        DateOnly? LastWateredOn,
-        int? WaterEveryDays);
+        IReadOnlyList<SavePlantCareScheduleRequest>? CareSchedules);
 
     public record UpdatePlantRequest(
         string Nickname,
         int TaxonId,
         string? Location,
-        DateOnly? LastWateredOn,
-        int? WaterEveryDays);
+        IReadOnlyList<SavePlantCareScheduleRequest>? CareSchedules);
+
+    public record SavePlantCareScheduleRequest(
+        int CareActionId,
+        int? EveryDays,
+        bool IsEnabled);
 
     public record SavePlantTaxonRequest(
         string Name,
@@ -35,11 +38,42 @@ namespace plant_manager
         string? Notes,
         bool IsEnabled);
 
+    public record SavePlantFlagDefinitionRequest(
+        string Name,
+        string? Category,
+        string? Color,
+        bool IsEnabled);
+
+    public record AssignPlantFlagRequest(
+        int PlantFlagDefinitionId,
+        string? Severity,
+        DateOnly? StartedOn,
+        string? Notes);
+
+    public record UpdatePlantFlagRequest(
+        string? Severity,
+        DateOnly? StartedOn,
+        DateOnly? ResolvedOn,
+        string? Notes);
+
     public record CreateActionLogRequest(
         int PlantId,
-        string Action,
+        int CareActionId,
         string? Notes,
-        DateOnly? PerformedOn);
+        DateOnly? PerformedOn,
+        IReadOnlyList<ActionLogResourceRequest>? Resources);
+
+    public record UpdateActionLogRequest(
+        int PlantId,
+        int CareActionId,
+        string? Notes,
+        DateOnly PerformedOn,
+        IReadOnlyList<ActionLogResourceRequest>? Resources);
+
+    public record ActionLogResourceRequest(
+        int ActionResourceId,
+        decimal? Quantity,
+        string? Unit);
 
     public record PlantTaxonDto(
         int Id,
@@ -88,16 +122,27 @@ namespace plant_manager
         int TaxonId,
         string Taxon,
         string Location,
-        DateOnly? LastWateredOn,
-        string LastWatered,
         string NextCare,
-        int WaterEveryDays,
-        string Status)
+        string Status,
+        IReadOnlyList<PlantFlagDto> Flags,
+        IReadOnlyList<PlantCareScheduleDto> CareSchedules)
     {
         public static PlantDto FromPlant(Plant plant)
         {
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
-            var nextCare = PlantCareFormatter.GetNextCareDate(plant);
+            var schedules = plant.CareSchedules
+                .OrderBy(schedule => schedule.CareAction.Name)
+                .Select(schedule => PlantCareScheduleDto.FromSchedule(
+                    schedule,
+                    GetLatestPerformedOn(plant, schedule.CareActionId),
+                    today))
+                .ToList();
+            var nextCare = schedules
+                .Where(schedule => schedule.IsEnabled)
+                .Select(schedule => PlantCareFormatter.GetNextCareDate(schedule.LastPerformedOn, schedule.EveryDays))
+                .Where(date => date is not null)
+                .OrderBy(date => date)
+                .FirstOrDefault();
 
             return new PlantDto(
                 plant.Id,
@@ -105,11 +150,52 @@ namespace plant_manager
                 plant.TaxonId,
                 $"{plant.Taxon.Genus} {plant.Taxon.Species}",
                 plant.Location,
-                plant.LastWateredOn,
-                PlantCareFormatter.FormatRelativeDate(plant.LastWateredOn, today, "Never"),
                 PlantCareFormatter.FormatRelativeDate(nextCare, today, "Unscheduled"),
-                plant.WaterEveryDays,
-                PlantCareFormatter.GetStatus(nextCare, today));
+                PlantCareFormatter.GetStatus(nextCare, today),
+                plant.Flags
+                    .OrderBy(flag => flag.ResolvedOn is not null)
+                    .ThenByDescending(flag => flag.StartedOn)
+                    .ThenBy(flag => flag.Definition.Name)
+                    .Select(PlantFlagDto.FromPlantFlag)
+                    .ToList(),
+                schedules);
+        }
+
+        private static DateOnly? GetLatestPerformedOn(Plant plant, int careActionId) =>
+            plant.ActionLogs
+                .Where(log => log.CareActionId == careActionId)
+                .Select(log => (DateOnly?)log.PerformedOn)
+                .Max();
+    }
+
+    public record PlantCareScheduleDto(
+        int Id,
+        int CareActionId,
+        string Action,
+        int EveryDays,
+        DateOnly? LastPerformedOn,
+        string LastPerformed,
+        string NextCare,
+        string Status,
+        bool IsEnabled)
+    {
+        public static PlantCareScheduleDto FromSchedule(
+            PlantCareSchedule schedule,
+            DateOnly? lastPerformedOn,
+            DateOnly today)
+        {
+            var nextCare = PlantCareFormatter.GetNextCareDate(lastPerformedOn, schedule.EveryDays);
+
+            return new PlantCareScheduleDto(
+                schedule.Id,
+                schedule.CareActionId,
+                schedule.CareAction.Name,
+                schedule.EveryDays,
+                lastPerformedOn,
+                PlantCareFormatter.FormatRelativeDate(lastPerformedOn, today, "Never"),
+                PlantCareFormatter.FormatRelativeDate(nextCare, today, "Unscheduled"),
+                PlantCareFormatter.GetStatus(nextCare, today),
+                schedule.IsEnabled);
         }
     }
 
@@ -117,46 +203,119 @@ namespace plant_manager
         int Id,
         int PlantId,
         string PlantName,
+        int CareActionId,
         string Action,
         string Due,
         string Status)
     {
-        public static CareTaskDto FromPlant(Plant plant, DateOnly today)
+        public static CareTaskDto FromSchedule(
+            PlantCareSchedule schedule,
+            DateOnly? lastPerformedOn,
+            DateOnly today)
         {
-            var nextCare = PlantCareFormatter.GetNextCareDate(plant);
+            var nextCare = PlantCareFormatter.GetNextCareDate(lastPerformedOn, schedule.EveryDays);
 
             return new CareTaskDto(
-                plant.Id,
-                plant.Id,
-                plant.Nickname,
-                "Water",
+                schedule.Id,
+                schedule.PlantId,
+                schedule.Plant.Nickname,
+                schedule.CareActionId,
+                schedule.CareAction.Name,
                 PlantCareFormatter.FormatRelativeDate(nextCare, today, "Unscheduled"),
                 PlantCareFormatter.GetStatus(nextCare, today));
         }
+    }
+
+    public record PlantFlagDefinitionDto(
+        int Id,
+        string Name,
+        string Category,
+        string Color,
+        bool IsEnabled)
+    {
+        public static PlantFlagDefinitionDto FromDefinition(PlantFlagDefinition definition) =>
+            new(
+                definition.Id,
+                definition.Name,
+                definition.Category,
+                definition.Color,
+                definition.IsEnabled);
+    }
+
+    public record PlantFlagDto(
+        int Id,
+        int PlantFlagDefinitionId,
+        string Name,
+        string Category,
+        string Color,
+        string Severity,
+        DateOnly StartedOn,
+        DateOnly? ResolvedOn,
+        string? Notes)
+    {
+        public static PlantFlagDto FromPlantFlag(PlantFlag flag) =>
+            new(
+                flag.Id,
+                flag.PlantFlagDefinitionId,
+                flag.Definition.Name,
+                flag.Definition.Category,
+                flag.Definition.Color,
+                flag.Severity,
+                flag.StartedOn,
+                flag.ResolvedOn,
+                flag.Notes);
     }
 
     public record ActionLogDto(
         int Id,
         int PlantId,
         string PlantName,
+        int CareActionId,
         string Action,
         string? Notes,
-        DateOnly PerformedOn)
+        DateOnly PerformedOn,
+        IReadOnlyList<ActionLogResourceDto> Resources)
     {
         public static ActionLogDto FromActionLog(ActionLog log) =>
-            new(log.Id, log.PlantId, log.Plant.Nickname, log.Action, log.Notes, log.PerformedOn);
+            new(
+                log.Id,
+                log.PlantId,
+                log.Plant.Nickname,
+                log.CareActionId,
+                log.ActionNameSnapshot,
+                log.Notes,
+                log.PerformedOn,
+                log.Resources
+                    .Select(resource => ActionLogResourceDto.FromActionLogResource(resource))
+                    .ToList());
+    }
+
+    public record ActionLogResourceDto(
+        int ActionResourceId,
+        string Name,
+        string? Category,
+        decimal? Quantity,
+        string? Unit)
+    {
+        public static ActionLogResourceDto FromActionLogResource(ActionLogResource resource) =>
+            new(
+                resource.ActionResourceId,
+                resource.ActionResource.Name,
+                resource.ActionResource.Category,
+                resource.Quantity,
+                resource.Unit);
     }
 
     internal static class PlantCareFormatter
     {
-        public static DateOnly? GetNextCareDate(Plant plant) =>
-            plant.LastWateredOn?.AddDays(plant.WaterEveryDays);
+        public static DateOnly? GetNextCareDate(DateOnly? lastPerformedOn, int everyDays) =>
+            lastPerformedOn?.AddDays(everyDays);
 
         public static string GetStatus(DateOnly? date, DateOnly today)
         {
             if (date is null)
             {
-                return "due";
+                return "unscheduled";
             }
 
             if (date <= today)

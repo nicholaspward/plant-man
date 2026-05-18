@@ -35,7 +35,7 @@ app.UseCors(frontendPolicy);
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    db.Database.EnsureCreated();
+    db.Database.Migrate();
     DatabaseSeeder.Seed(db);
 }
 
@@ -46,5 +46,6 @@ app.MapCareActionEndpoints();
 app.MapActionResourceEndpoints();
 app.MapCareTaskEndpoints();
 app.MapActionLogEndpoints();
+app.MapPlantFlagEndpoints();
 
 app.Run();

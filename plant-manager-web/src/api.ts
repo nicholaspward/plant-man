@@ -7,7 +7,11 @@ import type {
   CareLogPayload,
   CareTask,
   Plant,
+  AssignPlantFlagPayload,
   PlantPayload,
+  PlantFlag,
+  PlantFlagDefinition,
+  PlantFlagDefinitionPayload,
   PlantTaxon,
   PlantTaxonPayload,
 } from './domain';
@@ -130,8 +134,51 @@ export async function deletePlant(id: number) {
   });
 }
 
+export async function getPlantFlags() {
+  return request<PlantFlagDefinition[]>('/api/plant-flags');
+}
+
+export async function createPlantFlag(payload: PlantFlagDefinitionPayload) {
+  return request<PlantFlagDefinition>('/api/plant-flags', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updatePlantFlag(id: number, payload: PlantFlagDefinitionPayload) {
+  return request<PlantFlagDefinition>(`/api/plant-flags/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deletePlantFlag(id: number) {
+  return request<void>(`/api/plant-flags/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function assignPlantFlag(plantId: number, payload: AssignPlantFlagPayload) {
+  return request<PlantFlag>(`/api/plants/${plantId}/flags`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function resolvePlantFlag(plantId: number, flagId: number) {
+  return request<PlantFlag>(`/api/plants/${plantId}/flags/${flagId}/resolve`, {
+    method: 'POST',
+  });
+}
+
+export async function removePlantFlagAssignment(plantId: number, flagId: number) {
+  return request<void>(`/api/plants/${plantId}/flags/${flagId}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function getCareTasks() {
-  return request<CareTask[]>('/api/care-tasks/today');
+  return request<CareTask[]>('/api/care-tasks/upcoming');
 }
 
 export async function getActionLogs() {
@@ -142,5 +189,21 @@ export async function logCare(payload: CareLogPayload) {
   return request('/api/action-logs', {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+export async function updateActionLog(id: number, payload: CareLogPayload) {
+  return request<ActionLog>(`/api/action-logs/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      ...payload,
+      performedOn: payload.performedOn ?? new Date().toISOString().slice(0, 10),
+    }),
+  });
+}
+
+export async function deleteActionLog(id: number) {
+  return request<void>(`/api/action-logs/${id}`, {
+    method: 'DELETE',
   });
 }

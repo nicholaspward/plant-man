@@ -7,9 +7,12 @@ type HomeViewProps = {
   dueCount: number;
   error: string | null;
   isLoading: boolean;
+  isPlantSearchActive: boolean;
   plants: Plant[];
+  totalPlantCount: number;
   onCompleteTask: (task: CareTask) => void;
   onNewPlant: () => void;
+  onOpenPlant: (plant: Plant) => void;
 };
 
 export function HomeView({
@@ -17,9 +20,12 @@ export function HomeView({
   dueCount,
   error,
   isLoading,
+  isPlantSearchActive,
   plants,
+  totalPlantCount,
   onCompleteTask,
   onNewPlant,
+  onOpenPlant,
 }: HomeViewProps) {
   return (
     <>
@@ -45,7 +51,9 @@ export function HomeView({
 
         <div className="task-list">
           {!isLoading && careTasks.length === 0 ? (
-            <p className="empty-state">No care tasks yet.</p>
+            <p className="empty-state">
+              {isPlantSearchActive ? 'No care tasks match the search.' : 'No care tasks yet.'}
+            </p>
           ) : null}
 
           {careTasks.map((task) => (
@@ -61,7 +69,7 @@ export function HomeView({
                 onClick={() => onCompleteTask(task)}
               >
                 <CalendarCheck size={16} />
-                Done
+                Log
               </button>
             </article>
           ))}
@@ -77,12 +85,16 @@ export function HomeView({
         </div>
 
         <div className="plant-grid">
-          {!isLoading && plants.length === 0 ? (
+          {!isLoading && totalPlantCount === 0 ? (
             <p className="empty-state">No plants yet.</p>
           ) : null}
 
+          {!isLoading && totalPlantCount > 0 && plants.length === 0 ? (
+            <p className="empty-state">No plants match the search.</p>
+          ) : null}
+
           {plants.map((plant) => (
-            <PlantCard plant={plant} key={plant.id} />
+            <PlantCard plant={plant} key={plant.id} onOpen={onOpenPlant} />
           ))}
         </div>
       </section>

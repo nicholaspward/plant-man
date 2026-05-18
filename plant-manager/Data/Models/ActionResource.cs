@@ -8,5 +8,7 @@ namespace plant_manager.Data.Models
         public string? Category { get; set; }
         public string? Notes { get; set; }
         public bool IsEnabled { get; set; } = true;
+
+        public List<ActionLogResource> ActionLogResources { get; set; } = [];
     }
 }

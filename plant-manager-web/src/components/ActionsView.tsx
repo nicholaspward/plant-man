@@ -1,4 +1,4 @@
-import { Edit3, ListChecks, Plus, Save, Trash2, X } from 'lucide-react';
+import { Edit3, Plus, Save, Trash2, X } from 'lucide-react';
 import type { CareAction } from '../domain';
 import type { ActionFormState } from '../form-state';
 
@@ -7,6 +7,7 @@ type ActionsViewProps = {
   actions: CareAction[];
   error: string | null;
   form: ActionFormState;
+  isEditorOpen: boolean;
   isLoading: boolean;
   isSaving: boolean;
   onCancel: () => void;
@@ -22,6 +23,7 @@ export function ActionsView({
   actions,
   error,
   form,
+  isEditorOpen,
   isLoading,
   isSaving,
   onCancel,
@@ -49,6 +51,7 @@ export function ActionsView({
         </button>
       </section>
 
+      {isEditorOpen ? (
       <section className="editor-panel" aria-labelledby="action-editor-heading">
         <div className="section-heading">
           <div>
@@ -95,6 +98,7 @@ export function ActionsView({
           </button>
         </div>
       </section>
+      ) : null}
 
       <section className="section" aria-labelledby="actions-list-heading">
         <div className="section-heading">
@@ -108,9 +112,6 @@ export function ActionsView({
 
           {actions.map((action) => (
             <article className="plant-row" key={action.id}>
-              <div className="plant-mark">
-                <ListChecks size={20} />
-              </div>
               <div>
                 <h3>{action.name}</h3>
                 <p>

@@ -10,6 +10,10 @@ namespace plant_manager.Data
         public DbSet<CareAction> CareActions { get; set; }
         public DbSet<ActionResource> ActionResources { get; set; }
         public DbSet<ActionLog> ActionLogs { get; set; }
+        public DbSet<ActionLogResource> ActionLogResources { get; set; }
+        public DbSet<PlantCareSchedule> PlantCareSchedules { get; set; }
+        public DbSet<PlantFlagDefinition> PlantFlagDefinitions { get; set; }
+        public DbSet<PlantFlag> PlantFlags { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -65,12 +69,79 @@ namespace plant_manager.Data
             modelBuilder.Entity<ActionLog>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                entity.Property(e => e.Action).HasMaxLength(80).IsRequired();
+                entity.Property(e => e.ActionNameSnapshot).HasMaxLength(80).IsRequired();
                 entity.Property(e => e.Notes).HasMaxLength(1000);
                 entity.HasOne(e => e.Plant)
                     .WithMany(e => e.ActionLogs)
                     .HasForeignKey(e => e.PlantId)
                     .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.CareAction)
+                    .WithMany(e => e.ActionLogs)
+                    .HasForeignKey(e => e.CareActionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<ActionLogResource>(entity =>
+            {
+                entity.HasKey(e => new { e.ActionLogId, e.ActionResourceId });
+                entity.Property(e => e.Quantity).HasPrecision(10, 2);
+                entity.Property(e => e.Unit).HasMaxLength(40);
+                entity.HasOne(e => e.ActionLog)
+                    .WithMany(e => e.Resources)
+                    .HasForeignKey(e => e.ActionLogId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.ActionResource)
+                    .WithMany(e => e.ActionLogResources)
+                    .HasForeignKey(e => e.ActionResourceId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<PlantCareSchedule>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id)
+                      .ValueGeneratedOnAdd();
+                entity.Property(e => e.EveryDays).IsRequired();
+                entity.Property(e => e.IsEnabled).IsRequired();
+                entity.HasIndex(e => new { e.PlantId, e.CareActionId }).IsUnique();
+                entity.HasOne(e => e.Plant)
+                    .WithMany(e => e.CareSchedules)
+                    .HasForeignKey(e => e.PlantId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.CareAction)
+                    .WithMany(e => e.PlantCareSchedules)
+                    .HasForeignKey(e => e.CareActionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<PlantFlagDefinition>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id)
+                      .ValueGeneratedOnAdd();
+                entity.Property(e => e.Name).HasMaxLength(120).IsRequired();
+                entity.Property(e => e.Category).HasMaxLength(80).IsRequired();
+                entity.Property(e => e.Color).HasMaxLength(20).IsRequired();
+                entity.Property(e => e.IsEnabled).IsRequired();
+                entity.HasIndex(e => e.Name).IsUnique();
+            });
+
+            modelBuilder.Entity<PlantFlag>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id)
+                      .ValueGeneratedOnAdd();
+                entity.Property(e => e.Severity).HasMaxLength(20).IsRequired();
+                entity.Property(e => e.Notes).HasMaxLength(1000);
+                entity.HasIndex(e => new { e.PlantId, e.PlantFlagDefinitionId, e.ResolvedOn });
+                entity.HasOne(e => e.Plant)
+                    .WithMany(e => e.Flags)
+                    .HasForeignKey(e => e.PlantId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Definition)
+                    .WithMany(e => e.PlantFlags)
+                    .HasForeignKey(e => e.PlantFlagDefinitionId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }
