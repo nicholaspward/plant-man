@@ -10,7 +10,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(frontendPolicy, policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins("http://localhost:5173", "http://localhost:5174")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -42,8 +42,11 @@ using (var scope = app.Services.CreateScope())
 app.MapRootEndpoints();
 app.MapPlantEndpoints();
 app.MapPlantTaxonEndpoints();
+app.MapPlantLocationEndpoints();
 app.MapCareActionEndpoints();
 app.MapActionResourceEndpoints();
+app.MapCareActivityEndpoints();
+app.MapPlantCareScheduleEndpoints();
 app.MapCareTaskEndpoints();
 app.MapActionLogEndpoints();
 app.MapPlantFlagEndpoints();

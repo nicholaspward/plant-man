@@ -10,6 +10,7 @@ type HomeViewProps = {
   isPlantSearchActive: boolean;
   plants: Plant[];
   totalPlantCount: number;
+  onCompleteBulkTasks: (tasks: CareTask[]) => void;
   onCompleteTask: (task: CareTask) => void;
   onNewPlant: () => void;
   onOpenPlant: (plant: Plant) => void;
@@ -23,10 +24,13 @@ export function HomeView({
   isPlantSearchActive,
   plants,
   totalPlantCount,
+  onCompleteBulkTasks,
   onCompleteTask,
   onNewPlant,
   onOpenPlant,
 }: HomeViewProps) {
+  const dueTaskGroups = groupDueTasks(careTasks);
+
   return (
     <>
       <section className="summary-panel" aria-labelledby="summary-heading">
@@ -37,10 +41,6 @@ export function HomeView({
           </h2>
           <p>{error ?? 'Start with the plants that need attention now.'}</p>
         </div>
-        <button className="primary-action" type="button" onClick={onNewPlant}>
-          <Plus size={18} />
-          Add plant
-        </button>
       </section>
 
       <section className="section" aria-labelledby="care-heading">
@@ -55,6 +55,26 @@ export function HomeView({
               {isPlantSearchActive ? 'No care tasks match the search.' : 'No care tasks yet.'}
             </p>
           ) : null}
+
+          {dueTaskGroups.map((group) => (
+            <article className="task-row task-row-group" key={group.careActivityId}>
+              <span className="status-dot due" />
+              <div>
+                <h3>{group.action}</h3>
+                <p>
+                  {group.tasks.length} due - {formatPlantNames(group.tasks)}
+                </p>
+              </div>
+              <button
+                className="small-action"
+                type="button"
+                onClick={() => onCompleteBulkTasks(group.tasks)}
+              >
+                <CalendarCheck size={16} />
+                Log all due
+              </button>
+            </article>
+          ))}
 
           {careTasks.map((task) => (
             <article className="task-row" key={task.id}>
@@ -100,4 +120,36 @@ export function HomeView({
       </section>
     </>
   );
+}
+
+function groupDueTasks(tasks: CareTask[]) {
+  const groups = new Map<number, { careActivityId: number; action: string; tasks: CareTask[] }>();
+  for (const task of tasks) {
+    if (task.status !== 'due') {
+      continue;
+    }
+
+    const group = groups.get(task.careActivityId);
+    if (group) {
+      group.tasks.push(task);
+      continue;
+    }
+
+    groups.set(task.careActivityId, {
+      careActivityId: task.careActivityId,
+      action: task.action,
+      tasks: [task],
+    });
+  }
+
+  return [...groups.values()].sort((left, right) => left.action.localeCompare(right.action));
+}
+
+function formatPlantNames(tasks: CareTask[]) {
+  const names = tasks.map((task) => task.plantName);
+  if (names.length <= 3) {
+    return names.join(', ');
+  }
+
+  return `${names.slice(0, 3).join(', ')} + ${names.length - 3} more`;
 }

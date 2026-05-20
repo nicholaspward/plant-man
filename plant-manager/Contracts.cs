@@ -4,18 +4,24 @@ namespace plant_manager
 {
     public record CreatePlantRequest(
         string Nickname,
-        int TaxonId,
-        string? Location,
+        int? TaxonId,
+        int? LocationId,
         IReadOnlyList<SavePlantCareScheduleRequest>? CareSchedules);
 
     public record UpdatePlantRequest(
         string Nickname,
-        int TaxonId,
-        string? Location,
+        int? TaxonId,
+        int? LocationId,
         IReadOnlyList<SavePlantCareScheduleRequest>? CareSchedules);
 
     public record SavePlantCareScheduleRequest(
-        int CareActionId,
+        int CareActivityId,
+        int? EveryDays,
+        bool IsEnabled);
+
+    public record BulkSavePlantCareScheduleRequest(
+        IReadOnlyList<int> PlantIds,
+        int CareActivityId,
         int? EveryDays,
         bool IsEnabled);
 
@@ -26,6 +32,11 @@ namespace plant_manager
         string? Cultivar,
         string? Variety,
         string? Authority);
+
+    public record SavePlantLocationRequest(
+        string Name,
+        string? Notes,
+        bool IsEnabled);
 
     public record SaveCareActionRequest(
         string Name,
@@ -38,34 +49,85 @@ namespace plant_manager
         string? Notes,
         bool IsEnabled);
 
-    public record SavePlantFlagDefinitionRequest(
+    public record SaveCareActivityRequest(
+        string Name,
+        IReadOnlyList<SaveCareActivityActionRequest> Actions,
+        string? Notes,
+        bool IsEnabled);
+
+    public record SaveCareActivityActionRequest(
+        int CareActionId,
+        IReadOnlyList<SaveCareActivityActionResourceRequest>? Resources);
+
+    public record SaveCareActivityActionResourceRequest(
+        int ActionResourceId,
+        decimal? Quantity,
+        string? Unit,
+        string? Notes);
+
+    public record CareActivityActionResourceDto(
+        int ActionResourceId,
         string Name,
         string? Category,
+        decimal? Quantity,
+        string? Unit,
+        string? Notes)
+    {
+        public static CareActivityActionResourceDto FromCareActivityActionResource(
+            CareActivityActionResource resource) =>
+            new(
+                resource.ActionResourceId,
+                resource.ActionResource.Name,
+                resource.ActionResource.Category,
+                resource.Quantity,
+                resource.Unit,
+                resource.Notes);
+    }
+
+    public record CareActivityActionDto(
+        int CareActionId,
+        string Name,
+        string? Description,
+        int SortOrder,
+        IReadOnlyList<CareActivityActionResourceDto> Resources)
+    {
+        public static CareActivityActionDto FromCareActivityAction(CareActivityAction activityAction) =>
+            new(
+                activityAction.CareActionId,
+                activityAction.CareAction.Name,
+                activityAction.CareAction.Description,
+                activityAction.SortOrder,
+                activityAction.Resources
+                    .OrderBy(resource => resource.ActionResource.Name)
+                    .Select(CareActivityActionResourceDto.FromCareActivityActionResource)
+                    .ToList());
+    }
+
+    public record SavePlantFlagDefinitionRequest(
+        string Name,
         string? Color,
         bool IsEnabled);
 
     public record AssignPlantFlagRequest(
         int PlantFlagDefinitionId,
-        string? Severity,
         DateOnly? StartedOn,
         string? Notes);
 
     public record UpdatePlantFlagRequest(
-        string? Severity,
         DateOnly? StartedOn,
         DateOnly? ResolvedOn,
         string? Notes);
 
     public record CreateActionLogRequest(
         int PlantId,
-        int CareActionId,
+        int CareActivityId,
         string? Notes,
         DateOnly? PerformedOn,
         IReadOnlyList<ActionLogResourceRequest>? Resources);
 
     public record UpdateActionLogRequest(
         int PlantId,
-        int CareActionId,
+        int CareActivityId,
         string? Notes,
         DateOnly PerformedOn,
         IReadOnlyList<ActionLogResourceRequest>? Resources);
@@ -74,6 +136,13 @@ namespace plant_manager
         int ActionResourceId,
         decimal? Quantity,
         string? Unit);
+
+    public record BulkCompleteCareTasksRequest(
+        int CareActivityId,
+        IReadOnlyList<int> PlantIds,
+        DateOnly? PerformedOn,
+        string? Notes,
+        IReadOnlyList<ActionLogResourceRequest>? Resources);
 
     public record PlantTaxonDto(
         int Id,
@@ -93,6 +162,16 @@ namespace plant_manager
                 taxon.Cultivar,
                 taxon.Variety,
                 taxon.Authority);
+    }
+
+    public record PlantLocationDto(
+        int Id,
+        string Name,
+        string? Notes,
+        bool IsEnabled)
+    {
+        public static PlantLocationDto FromLocation(PlantLocation location) =>
+            new(location.Id, location.Name, location.Notes, location.IsEnabled);
     }
 
     public record CareActionDto(
@@ -116,11 +195,35 @@ namespace plant_manager
             new(resource.Id, resource.Name, resource.Category, resource.Notes, resource.IsEnabled);
     }
 
+    public record CareActivityDto(
+        int Id,
+        string Name,
+        int CareActionId,
+        string Action,
+        IReadOnlyList<CareActivityActionDto> Actions,
+        string? Notes,
+        bool IsEnabled)
+    {
+        public static CareActivityDto FromCareActivity(CareActivity activity) =>
+            new(
+                activity.Id,
+                activity.Name,
+                activity.PrimaryAction()?.Id ?? 0,
+                activity.PrimaryAction()?.Name ?? activity.Name,
+                activity.Actions
+                    .OrderBy(action => action.SortOrder)
+                    .Select(CareActivityActionDto.FromCareActivityAction)
+                    .ToList(),
+                activity.Notes,
+                activity.IsEnabled);
+    }
+
     public record PlantDto(
         int Id,
         string Nickname,
-        int TaxonId,
+        int? TaxonId,
         string Taxon,
+        int? LocationId,
         string Location,
         string NextCare,
         string Status,
@@ -131,10 +234,10 @@ namespace plant_manager
         {
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
             var schedules = plant.CareSchedules
-                .OrderBy(schedule => schedule.CareAction.Name)
+                .OrderBy(schedule => schedule.CareActivity.Name)
                 .Select(schedule => PlantCareScheduleDto.FromSchedule(
                     schedule,
-                    GetLatestPerformedOn(plant, schedule.CareActionId),
+                    GetLatestPerformedOn(plant, schedule.CareActivityId),
                     today))
                 .ToList();
             var nextCare = schedules
@@ -148,8 +251,9 @@ namespace plant_manager
                 plant.Id,
                 plant.Nickname,
                 plant.TaxonId,
-                $"{plant.Taxon.Genus} {plant.Taxon.Species}",
-                plant.Location,
+                plant.Taxon is null ? "Unassigned" : $"{plant.Taxon.Genus} {plant.Taxon.Species}",
+                plant.LocationId,
+                plant.Location?.Name ?? "Unassigned",
                 PlantCareFormatter.FormatRelativeDate(nextCare, today, "Unscheduled"),
                 PlantCareFormatter.GetStatus(nextCare, today),
                 plant.Flags
@@ -161,15 +265,16 @@ namespace plant_manager
                 schedules);
         }
 
-        private static DateOnly? GetLatestPerformedOn(Plant plant, int careActionId) =>
+        private static DateOnly? GetLatestPerformedOn(Plant plant, int careActivityId) =>
             plant.ActionLogs
-                .Where(log => log.CareActionId == careActionId)
+                .Where(log => log.CareActivityId == careActivityId)
                 .Select(log => (DateOnly?)log.PerformedOn)
                 .Max();
     }
 
     public record PlantCareScheduleDto(
         int Id,
+        int CareActivityId,
         int CareActionId,
         string Action,
         int EveryDays,
@@ -188,8 +293,9 @@ namespace plant_manager
 
             return new PlantCareScheduleDto(
                 schedule.Id,
+                schedule.CareActivityId,
                 schedule.CareActionId,
-                schedule.CareAction.Name,
+                schedule.CareActivity.Name,
                 schedule.EveryDays,
                 lastPerformedOn,
                 PlantCareFormatter.FormatRelativeDate(lastPerformedOn, today, "Never"),
@@ -199,10 +305,26 @@ namespace plant_manager
         }
     }
 
+    internal static class CareActivityExtensions
+    {
+        public static CareAction? PrimaryAction(this CareActivity activity) =>
+            activity.Actions
+                .OrderBy(action => action.SortOrder)
+                .Select(action => action.CareAction)
+                .FirstOrDefault();
+
+        public static int PrimaryActionId(this CareActivity activity) =>
+            activity.Actions
+                .OrderBy(action => action.SortOrder)
+                .Select(action => action.CareActionId)
+                .FirstOrDefault();
+    }
+
     public record CareTaskDto(
         int Id,
         int PlantId,
         string PlantName,
+        int CareActivityId,
         int CareActionId,
         string Action,
         string Due,
@@ -219,8 +341,9 @@ namespace plant_manager
                 schedule.Id,
                 schedule.PlantId,
                 schedule.Plant.Nickname,
+                schedule.CareActivityId,
                 schedule.CareActionId,
-                schedule.CareAction.Name,
+                schedule.CareActivity.Name,
                 PlantCareFormatter.FormatRelativeDate(nextCare, today, "Unscheduled"),
                 PlantCareFormatter.GetStatus(nextCare, today));
         }
@@ -229,7 +352,6 @@ namespace plant_manager
     public record PlantFlagDefinitionDto(
         int Id,
         string Name,
-        string Category,
         string Color,
         bool IsEnabled)
     {
@@ -237,7 +359,6 @@ namespace plant_manager
             new(
                 definition.Id,
                 definition.Name,
-                definition.Category,
                 definition.Color,
                 definition.IsEnabled);
     }
@@ -246,9 +367,7 @@ namespace plant_manager
         int Id,
         int PlantFlagDefinitionId,
         string Name,
-        string Category,
         string Color,
-        string Severity,
         DateOnly StartedOn,
         DateOnly? ResolvedOn,
         string? Notes)
@@ -258,9 +377,7 @@ namespace plant_manager
                 flag.Id,
                 flag.PlantFlagDefinitionId,
                 flag.Definition.Name,
-                flag.Definition.Category,
                 flag.Definition.Color,
-                flag.Severity,
                 flag.StartedOn,
                 flag.ResolvedOn,
                 flag.Notes);
@@ -270,6 +387,7 @@ namespace plant_manager
         int Id,
         int PlantId,
         string PlantName,
+        int CareActivityId,
         int CareActionId,
         string Action,
         string? Notes,
@@ -281,6 +399,7 @@ namespace plant_manager
                 log.Id,
                 log.PlantId,
                 log.Plant.Nickname,
+                log.CareActivityId,
                 log.CareActionId,
                 log.ActionNameSnapshot,
                 log.Notes,

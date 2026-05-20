@@ -1,4 +1,4 @@
-import { Edit3, Plus, Save, Trash2, X } from 'lucide-react';
+import { Edit3, Eye, Plus, Save, Trash2, X } from 'lucide-react';
 import type { ActionResource } from '../domain';
 import type { ResourceFormState } from '../form-state';
 
@@ -9,11 +9,14 @@ type ResourcesViewProps = {
   isEditorOpen: boolean;
   isLoading: boolean;
   isSaving: boolean;
+  selectedResource?: ActionResource;
   onCancel: () => void;
+  onCloseDetail: () => void;
   onDelete: (resource: ActionResource) => void;
   onEdit: (resource: ActionResource) => void;
   onFieldChange: (field: keyof ResourceFormState, value: string | boolean) => void;
   onNew: () => void;
+  onOpenDetail: (resource: ActionResource) => void;
   onSave: () => void;
   resources: ActionResource[];
 };
@@ -25,11 +28,14 @@ export function ResourcesView({
   isEditorOpen,
   isLoading,
   isSaving,
+  selectedResource,
   onCancel,
+  onCloseDetail,
   onDelete,
   onEdit,
   onFieldChange,
   onNew,
+  onOpenDetail,
   onSave,
   resources,
 }: ResourcesViewProps) {
@@ -50,6 +56,39 @@ export function ResourcesView({
           New resource
         </button>
       </section>
+
+      {selectedResource && !isEditorOpen ? (
+        <section className="editor-panel" aria-labelledby="resource-detail-heading">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Resource detail</p>
+              <h2 id="resource-detail-heading">{selectedResource.name}</h2>
+            </div>
+            <div className="row-actions">
+              <button className="icon-button compact" type="button" aria-label={`Edit ${selectedResource.name}`} onClick={() => onEdit(selectedResource)}>
+                <Edit3 size={17} />
+              </button>
+              <button className="icon-button compact" type="button" aria-label="Close resource detail" onClick={onCloseDetail}>
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+          <div className="plant-detail-meta">
+            <div>
+              <span>Category</span>
+              <strong>{selectedResource.category ?? 'Uncategorized'}</strong>
+            </div>
+            <div>
+              <span>Notes</span>
+              <strong>{selectedResource.notes ?? 'No notes'}</strong>
+            </div>
+            <div>
+              <span>Status</span>
+              <strong>{selectedResource.isEnabled ? 'Enabled' : 'Disabled'}</strong>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {isEditorOpen ? (
       <section className="editor-panel" aria-labelledby="resource-editor-heading">
@@ -130,6 +169,9 @@ export function ResourcesView({
                 </p>
               </div>
               <div className="row-actions">
+                <button className="icon-button compact" type="button" aria-label={`View ${resource.name}`} onClick={() => onOpenDetail(resource)}>
+                  <Eye size={17} />
+                </button>
                 <button className="icon-button compact" type="button" aria-label={`Edit ${resource.name}`} onClick={() => onEdit(resource)}>
                   <Edit3 size={17} />
                 </button>

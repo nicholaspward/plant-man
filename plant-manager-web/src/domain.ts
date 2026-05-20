@@ -3,8 +3,9 @@ export type CareStatus = 'due' | 'soon' | 'ok' | 'unscheduled';
 export type Plant = {
   id: number;
   nickname: string;
-  taxonId: number;
+  taxonId: number | null;
   taxon: string;
+  locationId: number | null;
   location: string;
   nextCare: string;
   status: CareStatus;
@@ -14,6 +15,7 @@ export type Plant = {
 
 export type PlantCareSchedule = {
   id: number;
+  careActivityId: number;
   careActionId: number;
   action: string;
   everyDays: number;
@@ -34,6 +36,13 @@ export type PlantTaxon = {
   authority: string | null;
 };
 
+export type PlantLocation = {
+  id: number;
+  name: string;
+  notes: string | null;
+  isEnabled: boolean;
+};
+
 export type CareAction = {
   id: number;
   name: string;
@@ -49,10 +58,36 @@ export type ActionResource = {
   isEnabled: boolean;
 };
 
+export type CareActivity = {
+  id: number;
+  name: string;
+  careActionId: number;
+  action: string;
+  actions: CareActivityAction[];
+  notes: string | null;
+  isEnabled: boolean;
+};
+
+export type CareActivityAction = {
+  careActionId: number;
+  name: string;
+  description: string | null;
+  sortOrder: number;
+  resources: CareActivityActionResource[];
+};
+
+export type CareActivityActionResource = {
+  actionResourceId: number;
+  name: string;
+  category: string | null;
+  quantity: number | null;
+  unit: string | null;
+  notes: string | null;
+};
+
 export type PlantFlagDefinition = {
   id: number;
   name: string;
-  category: string;
   color: string;
   isEnabled: boolean;
 };
@@ -61,31 +96,28 @@ export type PlantFlag = {
   id: number;
   plantFlagDefinitionId: number;
   name: string;
-  category: string;
   color: string;
-  severity: 'low' | 'medium' | 'high';
   startedOn: string;
   resolvedOn: string | null;
   notes: string | null;
 };
 
-export type ActionLogResource = {
-  actionResourceId: number;
-  name: string;
-  category: string | null;
-  quantity: number | null;
-  unit: string | null;
-};
-
 export type PlantPayload = {
   nickname: string;
-  taxonId: number;
-  location: string;
-  careSchedules: PlantCareSchedulePayload[];
+  taxonId: number | null;
+  locationId: number | null;
+  careSchedules: PlantCareSchedulePayload[] | null;
 };
 
 export type PlantCareSchedulePayload = {
-  careActionId: number;
+  careActivityId: number;
+  everyDays: number;
+  isEnabled: boolean;
+};
+
+export type BulkPlantCareSchedulePayload = {
+  plantIds: number[];
+  careActivityId: number;
   everyDays: number;
   isEnabled: boolean;
 };
@@ -97,6 +129,12 @@ export type PlantTaxonPayload = {
   cultivar: string | null;
   variety: string | null;
   authority: string | null;
+};
+
+export type PlantLocationPayload = {
+  name: string;
+  notes: string | null;
+  isEnabled: boolean;
 };
 
 export type CareActionPayload = {
@@ -112,23 +150,40 @@ export type ActionResourcePayload = {
   isEnabled: boolean;
 };
 
+export type CareActivityPayload = {
+  name: string;
+  actions: CareActivityActionPayload[];
+  notes: string | null;
+  isEnabled: boolean;
+};
+
+export type CareActivityActionPayload = {
+  careActionId: number;
+  resources: CareActivityActionResourcePayload[];
+};
+
+export type CareActivityActionResourcePayload = {
+  actionResourceId: number;
+  quantity: number | null;
+  unit: string | null;
+  notes: string | null;
+};
+
 export type PlantFlagDefinitionPayload = {
   name: string;
-  category: string | null;
   color: string | null;
   isEnabled: boolean;
 };
 
 export type AssignPlantFlagPayload = {
   plantFlagDefinitionId: number;
-  severity: string | null;
   startedOn: string | null;
   notes: string | null;
 };
 
-export type CareLogPayload = {
-  plantId: number;
-  careActionId: number;
+export type BulkCompleteCareTasksPayload = {
+  careActivityId: number;
+  plantIds: number[];
   notes: string | null;
   performedOn: string | null;
   resources: CareLogResourcePayload[];
@@ -140,21 +195,11 @@ export type CareLogResourcePayload = {
   unit: string | null;
 };
 
-export type ActionLog = {
-  id: number;
-  plantId: number;
-  plantName: string;
-  careActionId: number;
-  action: string;
-  notes: string | null;
-  performedOn: string;
-  resources: ActionLogResource[];
-};
-
 export type CareTask = {
   id: number;
   plantId: number;
   plantName: string;
+  careActivityId: number;
   careActionId: number;
   action: string;
   due: string;

@@ -1,12 +1,13 @@
 namespace plant_manager.Data.Models
 {
-    public class PlantFlagDefinition
+    public class PlantLocation
     {
         public int Id { get; set; }
+
         public string Name { get; set; } = string.Empty;
-        public string Color { get; set; } = "#f2f2f2";
+        public string? Notes { get; set; }
         public bool IsEnabled { get; set; } = true;
 
-        public List<PlantFlag> PlantFlags { get; set; } = [];
+        public List<Plant> Plants { get; set; } = [];
     }
 }

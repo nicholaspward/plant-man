@@ -1,4 +1,4 @@
-import { Edit3, Plus, Save, Trash2, X } from 'lucide-react';
+import { Edit3, Eye, Plus, Save, Trash2, X } from 'lucide-react';
 import type { PlantFlagDefinition } from '../domain';
 import type { FlagDefinitionFormState } from '../form-state';
 
@@ -10,11 +10,14 @@ type FlagsViewProps = {
   isEditorOpen: boolean;
   isLoading: boolean;
   isSaving: boolean;
+  selectedFlag?: PlantFlagDefinition;
   onCancel: () => void;
+  onCloseDetail: () => void;
   onDelete: (flag: PlantFlagDefinition) => void;
   onEdit: (flag: PlantFlagDefinition) => void;
   onFieldChange: (field: keyof FlagDefinitionFormState, value: string | boolean) => void;
   onNew: () => void;
+  onOpenDetail: (flag: PlantFlagDefinition) => void;
   onSave: () => void;
 };
 
@@ -26,11 +29,14 @@ export function FlagsView({
   isEditorOpen,
   isLoading,
   isSaving,
+  selectedFlag,
   onCancel,
+  onCloseDetail,
   onDelete,
   onEdit,
   onFieldChange,
   onNew,
+  onOpenDetail,
   onSave,
 }: FlagsViewProps) {
   const enabledCount = flags.filter((flag) => flag.isEnabled).length;
@@ -43,13 +49,46 @@ export function FlagsView({
           <h2 id="flags-summary-heading">
             {isLoading ? 'Loading flags' : `${enabledCount} flags enabled`}
           </h2>
-          <p>{error ?? 'Configure reusable pest, condition, and workflow flags for plants.'}</p>
+          <p>{error ?? 'Configure reusable flags for plants.'}</p>
         </div>
         <button className="primary-action" type="button" onClick={onNew}>
           <Plus size={18} />
           New flag
         </button>
       </section>
+
+      {selectedFlag && !isEditorOpen ? (
+        <section className="editor-panel" aria-labelledby="flag-detail-heading">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Flag detail</p>
+              <h2 id="flag-detail-heading">{selectedFlag.name}</h2>
+            </div>
+            <div className="row-actions">
+              <button className="icon-button compact" type="button" aria-label={`Edit ${selectedFlag.name}`} onClick={() => onEdit(selectedFlag)}>
+                <Edit3 size={17} />
+              </button>
+              <button className="icon-button compact" type="button" aria-label="Close flag detail" onClick={onCloseDetail}>
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+          <div className="plant-detail-meta">
+            <div>
+              <span>Color</span>
+              <strong>
+                <span className="flag-chip" style={{ backgroundColor: selectedFlag.color }}>
+                  {selectedFlag.name}
+                </span>
+              </strong>
+            </div>
+            <div>
+              <span>Status</span>
+              <strong>{selectedFlag.isEnabled ? 'Enabled' : 'Disabled'}</strong>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {isEditorOpen ? (
         <section className="editor-panel" aria-labelledby="flag-editor-heading">
@@ -70,19 +109,6 @@ export function FlagsView({
                 value={form.name}
                 onChange={(event) => onFieldChange('name', event.target.value)}
               />
-            </label>
-            <label>
-              Category
-              <select
-                value={form.category}
-                onChange={(event) => onFieldChange('category', event.target.value)}
-              >
-                <option value="Pest">Pest</option>
-                <option value="Disease">Disease</option>
-                <option value="Condition">Condition</option>
-                <option value="Workflow">Workflow</option>
-                <option value="General">General</option>
-              </select>
             </label>
             <label>
               Color
@@ -128,16 +154,15 @@ export function FlagsView({
             <article className="plant-row" key={flag.id}>
               <div>
                 <h3>{flag.name}</h3>
-                <p>
-                  {flag.category}
-                  {' - '}
-                  {flag.isEnabled ? 'Enabled' : 'Disabled'}
-                </p>
+                <p>{flag.isEnabled ? 'Enabled' : 'Disabled'}</p>
               </div>
               <div className="row-actions">
                 <span className="flag-chip" style={{ backgroundColor: flag.color }}>
                   {flag.name}
                 </span>
+                <button className="icon-button compact" type="button" aria-label={`View ${flag.name}`} onClick={() => onOpenDetail(flag)}>
+                  <Eye size={17} />
+                </button>
                 <button className="icon-button compact" type="button" aria-label={`Edit ${flag.name}`} onClick={() => onEdit(flag)}>
                   <Edit3 size={17} />
                 </button>

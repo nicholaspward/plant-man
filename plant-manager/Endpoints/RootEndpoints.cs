@@ -13,8 +13,10 @@ namespace plant_manager.Endpoints
                     "/api/health",
                     "/api/plants",
                     "/api/plant-taxa",
+                    "/api/plant-locations",
                     "/api/care-actions",
                     "/api/action-resources",
+                    "/api/care-activities",
                     "/api/care-tasks/upcoming",
                     "/api/action-logs"
                 }

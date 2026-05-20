@@ -26,13 +26,23 @@ namespace plant_manager.Data
             new() { Name = "Pruners", Category = "Equipment", Notes = "Cutting tool for pruning or cleanup." }
         ];
 
+        private static readonly StarterCareActivity[] StarterCareActivities =
+        [
+            new("Water", [new("Water", ["Water"])]),
+            new("Repot with Potting Mix", [new("Repot", ["Potting Mix"])]),
+            new("Fertilize", [new("Fertilize", ["Fertilizer"])]),
+            new("Prune", [new("Prune", ["Pruners"])]),
+            new("Inspect", [new("Inspect", [])])
+        ];
+
         private static readonly PlantFlagDefinition[] StarterFlagDefinitions =
         [
-            new() { Name = "Spider mites", Category = "Pest", Color = "#ffe4e1" },
-            new() { Name = "Fungus gnats", Category = "Pest", Color = "#fff4cc" },
-            new() { Name = "Quarantine", Category = "Workflow", Color = "#e8eef8" },
-            new() { Name = "Needs repotting", Category = "Condition", Color = "#e9f5e7" },
-            new() { Name = "Watch closely", Category = "Workflow", Color = "#eeeeee" }
+            new() { Name = "Spider mites", Color = "#ffe4e1" },
+            new() { Name = "Fungus gnats", Color = "#fff4cc" },
+            new() { Name = "Dying", Color = "#ffd6d6" },
+            new() { Name = "Quarantine", Color = "#e8eef8" },
+            new() { Name = "Needs repotting", Color = "#e9f5e7" },
+            new() { Name = "Watch closely", Color = "#eeeeee" }
         ];
 
         private static readonly StarterTaxon[] StarterTaxa =
@@ -57,14 +67,42 @@ namespace plant_manager.Data
             new("Money Tree", "Pachira", "aquatica")
         ];
 
+        private static readonly StarterPlant[] StarterPlants =
+        [
+            new("Chinese Money Plant 1", "Chinese Money Plant", "Plant cart"),
+            new("Chinese Money Plant 2", "Chinese Money Plant", "Plant cart"),
+            new("Chinese Money Plant 3", "Chinese Money Plant", "Plant cart"),
+            new("Croton Petra", "Croton Petra", "Plant cart"),
+            new("Parallel Peperomia", "Parallel Peperomia", "Plant cart"),
+            new("Marble Peperomia", "Marble Peperomia", "Plant cart"),
+            new("Silver Squill", "Silver Squill", "Plant cart"),
+            new("Fiddle-leaf Fig", "Fiddle-leaf Fig", "Living room"),
+            new("Ficus Audrey", "Ficus Audrey", "Plant cart"),
+            new("Dumbcane 1", "Dumbcane", "Plant cart"),
+            new("Dumbcane 2", "Dumbcane", "Plant cart"),
+            new("Kris Plant", "Kris Plant", "Plant cart"),
+            new("Lucky Bamboo", "Lucky Bamboo", "Plant cart"),
+            new("Common Ivy 1", "Common Ivy", "Plant cart"),
+            new("Common Ivy 2", "Common Ivy", "Plant cart"),
+            new("Peacock Plant 1", "Peacock Plant", "Plant cart"),
+            new("Peacock Plant 2", "Peacock Plant", "Plant cart"),
+            new("False Shamrock", "False Shamrock", "Plant cart"),
+            new("Pinstripe Plant", "Pinstripe Plant", "Computer desk"),
+            new("Monstera Thai Constellation", "Monstera Thai Constellation", "Plant cart"),
+            new("Pothos", "Pothos", "Plant cart"),
+            new("Moth orchid", "Moth orchid", "Plant cart"),
+            new("Money Tree", "Money Tree", "Computer desk")
+        ];
+
         public static void Seed(ApplicationDbContext db)
         {
             SeedCareActions(db);
             SeedActionResources(db);
+            SeedCareActivities(db);
             SeedPlantFlags(db);
             SeedStarterTaxa(db);
+            SeedPlantLocations(db);
             SeedStarterPlants(db);
-            SeedDefaultCareSchedules(db);
         }
 
         private static void SeedCareActions(ApplicationDbContext db)
@@ -90,33 +128,6 @@ namespace plant_manager.Data
             }
 
             db.CareActions.AddRange(missingActions);
-            db.SaveChanges();
-        }
-
-        private static void SeedDefaultCareSchedules(ApplicationDbContext db)
-        {
-            var waterAction = db.CareActions
-                .FirstOrDefault(action => action.Name == "Water");
-            if (waterAction is null)
-            {
-                return;
-            }
-
-            var plantsMissingWaterSchedule = db.Plants
-                .Include(plant => plant.CareSchedules)
-                .Where(plant => !plant.CareSchedules.Any(schedule => schedule.CareActionId == waterAction.Id))
-                .ToList();
-
-            foreach (var plant in plantsMissingWaterSchedule)
-            {
-                plant.CareSchedules.Add(new PlantCareSchedule
-                {
-                    CareActionId = waterAction.Id,
-                    EveryDays = 7,
-                    IsEnabled = true
-                });
-            }
-
             db.SaveChanges();
         }
 
@@ -147,6 +158,65 @@ namespace plant_manager.Data
             db.SaveChanges();
         }
 
+        private static void SeedCareActivities(ApplicationDbContext db)
+        {
+            var existingActivityNames = db.CareActivities
+                .Select(activity => activity.Name)
+                .ToList();
+            var actionsByName = db.CareActions.ToDictionary(action => action.Name, StringComparer.OrdinalIgnoreCase);
+            var resourcesByName = db.ActionResources.ToDictionary(resource => resource.Name, StringComparer.OrdinalIgnoreCase);
+
+            var missingActivities = StarterCareActivities
+                .Where(starterActivity => !existingActivityNames.Any(existingName =>
+                    string.Equals(existingName, starterActivity.Name, StringComparison.OrdinalIgnoreCase)))
+                .Select(starterActivity =>
+                {
+                    var actions = starterActivity.Actions
+                        .Select((starterAction, index) => actionsByName.TryGetValue(starterAction.Name, out var action)
+                            ? new CareActivityAction
+                            {
+                                CareActionId = action.Id,
+                                CareAction = action,
+                                SortOrder = index,
+                                Resources = starterAction.ResourceNames
+                                    .Select(resourceName => resourcesByName.TryGetValue(resourceName, out var resource)
+                                        ? new CareActivityActionResource
+                                        {
+                                            ActionResourceId = resource.Id,
+                                            ActionResource = resource
+                                        }
+                                        : null)
+                                    .OfType<CareActivityActionResource>()
+                                    .ToList()
+                            }
+                            : null)
+                        .OfType<CareActivityAction>()
+                        .ToList();
+                    if (actions.Count != starterActivity.Actions.Count
+                        || actions.Zip(starterActivity.Actions).Any(pair => pair.First.Resources.Count != pair.Second.ResourceNames.Count))
+                    {
+                        return null;
+                    }
+
+                    return new CareActivity
+                    {
+                        Name = starterActivity.Name,
+                        IsEnabled = true,
+                        Actions = actions
+                    };
+                })
+                .OfType<CareActivity>()
+                .ToList();
+
+            if (missingActivities.Count == 0)
+            {
+                return;
+            }
+
+            db.CareActivities.AddRange(missingActivities);
+            db.SaveChanges();
+        }
+
         private static void SeedPlantFlags(ApplicationDbContext db)
         {
             var existingFlagNames = db.PlantFlagDefinitions
@@ -159,7 +229,6 @@ namespace plant_manager.Data
                 .Select(starterFlag => new PlantFlagDefinition
                 {
                     Name = starterFlag.Name,
-                    Category = starterFlag.Category,
                     Color = starterFlag.Color,
                     IsEnabled = starterFlag.IsEnabled
                 })
@@ -207,78 +276,100 @@ namespace plant_manager.Data
             }
 
             var taxaByName = db.PlantTaxa.ToDictionary(taxon => taxon.Name, StringComparer.OrdinalIgnoreCase);
+            var locationsByName = db.PlantLocations.ToDictionary(location => location.Name, StringComparer.OrdinalIgnoreCase);
+            var flagsByName = db.PlantFlagDefinitions.ToDictionary(flag => flag.Name, StringComparer.OrdinalIgnoreCase);
 
             PlantTaxon Taxon(string name) => taxaByName[name];
+            PlantLocation Location(string name) => locationsByName[name];
 
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var starterPlants = StarterPlants
+                .Select(starterPlant => new Plant
+                {
+                    Nickname = starterPlant.Nickname,
+                    Taxon = Taxon(starterPlant.TaxonName),
+                    Location = Location(starterPlant.Location)
+                })
+                .ToList();
 
-            var starterPlants = new[]
-            {
-                new
-                {
-                    Plant = new Plant
-                    {
-                        Nickname = "Pothos",
-                        Taxon = Taxon("Pothos"),
-                        Location = "Living room"
-                    },
-                    InitialWateredOn = today.AddDays(-7),
-                    WaterIntervalDays = 7
-                },
-                new
-                {
-                    Plant = new Plant
-                    {
-                        Nickname = "Money Tree",
-                        Taxon = Taxon("Money Tree"),
-                        Location = "Bedroom"
-                    },
-                    InitialWateredOn = today.AddDays(-13),
-                    WaterIntervalDays = 14
-                },
-                new
-                {
-                    Plant = new Plant
-                    {
-                        Nickname = "Chinese Money Plant",
-                        Taxon = Taxon("Chinese Money Plant"),
-                        Location = "Kitchen"
-                    },
-                    InitialWateredOn = today.AddDays(-2),
-                    WaterIntervalDays = 6
-                }
-            };
-
-            db.Plants.AddRange(starterPlants.Select(starterPlant => starterPlant.Plant));
+            db.Plants.AddRange(starterPlants);
             db.SaveChanges();
 
-            var waterAction = db.CareActions.FirstOrDefault(action => action.Name == "Water");
-            if (waterAction is null)
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var starterFlags = new List<PlantFlag>();
+
+            void AddFlag(string plantNickname, string flagName)
+            {
+                if (!flagsByName.TryGetValue(flagName, out var flag))
+                {
+                    return;
+                }
+
+                var plant = starterPlants.FirstOrDefault(item =>
+                    string.Equals(item.Nickname, plantNickname, StringComparison.OrdinalIgnoreCase));
+                if (plant is null)
+                {
+                    return;
+                }
+
+                starterFlags.Add(new PlantFlag
+                {
+                    PlantId = plant.Id,
+                    PlantFlagDefinitionId = flag.Id,
+                    StartedOn = today
+                });
+            }
+
+            AddFlag("Pinstripe Plant", "Dying");
+            AddFlag("Pinstripe Plant", "Spider mites");
+            AddFlag("Pinstripe Plant", "Quarantine");
+            AddFlag("Chinese Money Plant 1", "Quarantine");
+            AddFlag("Chinese Money Plant 2", "Quarantine");
+            AddFlag("Chinese Money Plant 3", "Quarantine");
+            AddFlag("Ficus Audrey", "Needs repotting");
+
+            db.PlantFlags.AddRange(starterFlags);
+            db.SaveChanges();
+        }
+
+        private static void SeedPlantLocations(ApplicationDbContext db)
+        {
+            var starterLocationNames = StarterPlants
+                .Select(plant => plant.Location)
+                .Append("Unassigned")
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var existingLocationNames = db.PlantLocations
+                .Select(location => location.Name)
+                .ToList();
+
+            var missingLocations = starterLocationNames
+                .Where(starterLocation => !existingLocationNames.Any(existingName =>
+                    string.Equals(existingName, starterLocation, StringComparison.OrdinalIgnoreCase)))
+                .Select(starterLocation => new PlantLocation
+                {
+                    Name = starterLocation,
+                    IsEnabled = true
+                })
+                .ToList();
+
+            if (missingLocations.Count == 0)
             {
                 return;
             }
 
-            foreach (var starterPlant in starterPlants)
-            {
-                starterPlant.Plant.CareSchedules.Add(new PlantCareSchedule
-                {
-                    CareActionId = waterAction.Id,
-                    EveryDays = starterPlant.WaterIntervalDays,
-                    IsEnabled = true
-                });
-                db.ActionLogs.Add(new ActionLog
-                {
-                    PlantId = starterPlant.Plant.Id,
-                    CareActionId = waterAction.Id,
-                    ActionNameSnapshot = waterAction.Name,
-                    Notes = "Starter watering history.",
-                    PerformedOn = starterPlant.InitialWateredOn
-                });
-            }
-
+            db.PlantLocations.AddRange(missingLocations);
             db.SaveChanges();
         }
 
         private sealed record StarterTaxon(string Name, string Genus, string Species);
+
+        private sealed record StarterCareActivity(string Name, IReadOnlyList<StarterCareActivityAction> Actions);
+
+        private sealed record StarterCareActivityAction(string Name, IReadOnlyList<string> ResourceNames);
+
+        private sealed record StarterPlant(
+            string Nickname,
+            string TaxonName,
+            string Location);
     }
 }

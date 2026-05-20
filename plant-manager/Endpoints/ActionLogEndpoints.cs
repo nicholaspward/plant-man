@@ -12,6 +12,7 @@ namespace plant_manager.Endpoints
             {
                 var logs = await db.ActionLogs
                     .Include(log => log.Plant)
+                    .Include(log => log.CareActivity)
                     .Include(log => log.Resources)
                     .ThenInclude(resource => resource.ActionResource)
                     .OrderByDescending(log => log.PerformedOn)
@@ -29,19 +30,26 @@ namespace plant_manager.Endpoints
                     return Results.BadRequest(new { error = "Plant was not found." });
                 }
 
-                var action = await db.CareActions.FindAsync(request.CareActionId);
-                if (action is null)
+                var activity = await db.CareActivities
+                    .Include(item => item.Actions)
+                    .ThenInclude(action => action.CareAction)
+                    .Include(item => item.Actions)
+                    .ThenInclude(action => action.Resources)
+                    .ThenInclude(resource => resource.ActionResource)
+                    .FirstOrDefaultAsync(item => item.Id == request.CareActivityId);
+                if (activity is null)
                 {
-                    return Results.BadRequest(new { error = "Care action was not found." });
+                    return Results.BadRequest(new { error = "Care activity was not found." });
                 }
 
-                if (!action.IsEnabled)
+                var primaryAction = activity.PrimaryAction();
+                if (!activity.IsEnabled || primaryAction is null || activity.Actions.Any(action => !action.CareAction.IsEnabled))
                 {
-                    return Results.BadRequest(new { error = "Disabled actions cannot be logged." });
+                    return Results.BadRequest(new { error = "Disabled activities cannot be logged." });
                 }
 
                 var performedOn = request.PerformedOn ?? DateOnly.FromDateTime(DateTime.UtcNow);
-                var (resources, resourceError) = await BuildLogResources(request.Resources, db);
+                var (resources, resourceError) = await BuildLogResources(request.Resources, activity, db);
                 if (resourceError is not null)
                 {
                     return Results.BadRequest(new { error = resourceError });
@@ -50,9 +58,11 @@ namespace plant_manager.Endpoints
                 var log = new ActionLog
                 {
                     PlantId = plant.Id,
-                    CareActionId = action.Id,
-                    CareAction = action,
-                    ActionNameSnapshot = action.Name,
+                    CareActionId = primaryAction.Id,
+                    CareActivityId = activity.Id,
+                    CareAction = primaryAction,
+                    CareActivity = activity,
+                    ActionNameSnapshot = activity.Name,
                     Notes = request.Notes?.Trim(),
                     PerformedOn = performedOn,
                     Resources = resources
@@ -70,6 +80,7 @@ namespace plant_manager.Endpoints
             {
                 var log = await db.ActionLogs
                     .Include(item => item.Plant)
+                    .Include(item => item.CareActivity)
                     .Include(item => item.Resources)
                     .FirstOrDefaultAsync(item => item.Id == id);
                 if (log is null)
@@ -77,27 +88,31 @@ namespace plant_manager.Endpoints
                     return Results.NotFound();
                 }
 
-                var oldPlantId = log.PlantId;
-                var oldCareActionId = log.CareActionId;
-
                 var plant = await db.Plants.FindAsync(request.PlantId);
                 if (plant is null)
                 {
                     return Results.BadRequest(new { error = "Plant was not found." });
                 }
 
-                var action = await db.CareActions.FindAsync(request.CareActionId);
-                if (action is null)
+                var activity = await db.CareActivities
+                    .Include(item => item.Actions)
+                    .ThenInclude(action => action.CareAction)
+                    .Include(item => item.Actions)
+                    .ThenInclude(action => action.Resources)
+                    .ThenInclude(resource => resource.ActionResource)
+                    .FirstOrDefaultAsync(item => item.Id == request.CareActivityId);
+                if (activity is null)
                 {
-                    return Results.BadRequest(new { error = "Care action was not found." });
+                    return Results.BadRequest(new { error = "Care activity was not found." });
                 }
 
-                if (!action.IsEnabled)
+                var primaryAction = activity.PrimaryAction();
+                if (!activity.IsEnabled || primaryAction is null || activity.Actions.Any(action => !action.CareAction.IsEnabled))
                 {
-                    return Results.BadRequest(new { error = "Disabled actions cannot be logged." });
+                    return Results.BadRequest(new { error = "Disabled activities cannot be logged." });
                 }
 
-                var (resources, resourceError) = await BuildLogResources(request.Resources, db);
+                var (resources, resourceError) = await BuildLogResources(request.Resources, activity, db);
                 if (resourceError is not null)
                 {
                     return Results.BadRequest(new { error = resourceError });
@@ -107,9 +122,11 @@ namespace plant_manager.Endpoints
 
                 log.PlantId = plant.Id;
                 log.Plant = plant;
-                log.CareActionId = action.Id;
-                log.CareAction = action;
-                log.ActionNameSnapshot = action.Name;
+                log.CareActionId = primaryAction.Id;
+                log.CareActivityId = activity.Id;
+                log.CareAction = primaryAction;
+                log.CareActivity = activity;
+                log.ActionNameSnapshot = activity.Name;
                 log.Notes = request.Notes?.Trim();
                 log.PerformedOn = request.PerformedOn;
                 log.Resources = resources;
@@ -136,12 +153,23 @@ namespace plant_manager.Endpoints
 
         private static async Task<(List<ActionLogResource> Resources, string? Error)> BuildLogResources(
             IReadOnlyList<ActionLogResourceRequest>? requestResources,
+            CareActivity activity,
             ApplicationDbContext db)
         {
             var requestedResources = requestResources?
                 .GroupBy(resource => resource.ActionResourceId)
                 .Select(group => group.First())
                 .ToList() ?? [];
+            foreach (var configuredResource in GetConfiguredResources(activity))
+            {
+                if (!requestedResources.Any(resource => resource.ActionResourceId == configuredResource.ActionResourceId))
+                {
+                    requestedResources.Add(new ActionLogResourceRequest(
+                        configuredResource.ActionResourceId,
+                        configuredResource.Quantity,
+                        configuredResource.Unit));
+                }
+            }
 
             if (requestedResources.Any(resource => resource.Quantity < 0))
             {
@@ -175,6 +203,12 @@ namespace plant_manager.Endpoints
                 })
                 .ToList(), null);
         }
+
+        private static IEnumerable<CareActivityActionResource> GetConfiguredResources(CareActivity activity) =>
+            activity.Actions
+                .SelectMany(action => action.Resources)
+                .GroupBy(resource => resource.ActionResourceId)
+                .Select(group => group.First());
 
     }
 }

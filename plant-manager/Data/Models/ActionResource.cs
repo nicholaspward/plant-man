@@ -9,6 +9,7 @@ namespace plant_manager.Data.Models
         public string? Notes { get; set; }
         public bool IsEnabled { get; set; } = true;
 
+        public List<CareActivityActionResource> CareActivityActionResources { get; set; } = [];
         public List<ActionLogResource> ActionLogResources { get; set; } = [];
     }
 }

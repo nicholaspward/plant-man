@@ -31,6 +31,9 @@ namespace plant_manager.Data.Migrations
                     b.Property<int>("CareActionId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("CareActivityId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
                         .HasColumnType("TEXT");
@@ -44,6 +47,8 @@ namespace plant_manager.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CareActionId");
+
+                    b.HasIndex("CareActivityId");
 
                     b.HasIndex("PlantId");
 
@@ -129,26 +134,103 @@ namespace plant_manager.Data.Migrations
                     b.ToTable("CareActions");
                 });
 
+            modelBuilder.Entity("plant_manager.Data.Models.CareActivity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("CareActivities");
+                });
+
+            modelBuilder.Entity("plant_manager.Data.Models.CareActivityAction", b =>
+                {
+                    b.Property<int>("CareActivityId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CareActionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("CareActivityId", "CareActionId");
+
+                    b.HasIndex("CareActionId");
+
+                    b.HasIndex("CareActivityId", "SortOrder")
+                        .IsUnique();
+
+                    b.ToTable("CareActivityActions");
+                });
+
+            modelBuilder.Entity("plant_manager.Data.Models.CareActivityActionResource", b =>
+                {
+                    b.Property<int>("CareActivityId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CareActionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ActionResourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("Quantity")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Unit")
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("CareActivityId", "CareActionId", "ActionResourceId");
+
+                    b.HasIndex("ActionResourceId");
+
+                    b.ToTable("CareActivityActionResources");
+                });
+
             modelBuilder.Entity("plant_manager.Data.Models.Plant", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Location")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("TEXT");
+                    b.Property<int?>("LocationId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Nickname")
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("TaxonId")
+                    b.Property<int?>("TaxonId")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LocationId");
 
                     b.HasIndex("TaxonId");
 
@@ -164,6 +246,9 @@ namespace plant_manager.Data.Migrations
                     b.Property<int>("CareActionId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("CareActivityId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("EveryDays")
                         .HasColumnType("INTEGER");
 
@@ -177,7 +262,11 @@ namespace plant_manager.Data.Migrations
 
                     b.HasIndex("CareActionId");
 
-                    b.HasIndex("PlantId", "CareActionId")
+                    b.HasIndex("CareActivityId");
+
+                    b.HasIndex("PlantId", "CareActionId");
+
+                    b.HasIndex("PlantId", "CareActivityId")
                         .IsUnique();
 
                     b.ToTable("PlantCareSchedules");
@@ -202,11 +291,6 @@ namespace plant_manager.Data.Migrations
                     b.Property<DateOnly?>("ResolvedOn")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Severity")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT");
-
                     b.Property<DateOnly>("StartedOn")
                         .HasColumnType("TEXT");
 
@@ -224,11 +308,6 @@ namespace plant_manager.Data.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("TEXT");
 
                     b.Property<string>("Color")
                         .IsRequired()
@@ -249,6 +328,32 @@ namespace plant_manager.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("PlantFlagDefinitions");
+                });
+
+            modelBuilder.Entity("plant_manager.Data.Models.PlantLocation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("PlantLocations");
                 });
 
             modelBuilder.Entity("plant_manager.Data.Models.PlantTaxon", b =>
@@ -297,6 +402,12 @@ namespace plant_manager.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("plant_manager.Data.Models.CareActivity", "CareActivity")
+                        .WithMany("ActionLogs")
+                        .HasForeignKey("CareActivityId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("plant_manager.Data.Models.Plant", "Plant")
                         .WithMany("ActionLogs")
                         .HasForeignKey("PlantId")
@@ -304,6 +415,8 @@ namespace plant_manager.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("CareAction");
+
+                    b.Navigation("CareActivity");
 
                     b.Navigation("Plant");
                 });
@@ -327,13 +440,57 @@ namespace plant_manager.Data.Migrations
                     b.Navigation("ActionResource");
                 });
 
+            modelBuilder.Entity("plant_manager.Data.Models.CareActivityAction", b =>
+                {
+                    b.HasOne("plant_manager.Data.Models.CareAction", "CareAction")
+                        .WithMany("CareActivityActions")
+                        .HasForeignKey("CareActionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("plant_manager.Data.Models.CareActivity", "CareActivity")
+                        .WithMany("Actions")
+                        .HasForeignKey("CareActivityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CareAction");
+
+                    b.Navigation("CareActivity");
+                });
+
+            modelBuilder.Entity("plant_manager.Data.Models.CareActivityActionResource", b =>
+                {
+                    b.HasOne("plant_manager.Data.Models.ActionResource", "ActionResource")
+                        .WithMany("CareActivityActionResources")
+                        .HasForeignKey("ActionResourceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("plant_manager.Data.Models.CareActivityAction", "CareActivityAction")
+                        .WithMany("Resources")
+                        .HasForeignKey("CareActivityId", "CareActionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ActionResource");
+
+                    b.Navigation("CareActivityAction");
+                });
+
             modelBuilder.Entity("plant_manager.Data.Models.Plant", b =>
                 {
+                    b.HasOne("plant_manager.Data.Models.PlantLocation", "Location")
+                        .WithMany("Plants")
+                        .HasForeignKey("LocationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("plant_manager.Data.Models.PlantTaxon", "Taxon")
                         .WithMany()
                         .HasForeignKey("TaxonId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Location");
 
                     b.Navigation("Taxon");
                 });
@@ -346,6 +503,12 @@ namespace plant_manager.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("plant_manager.Data.Models.CareActivity", "CareActivity")
+                        .WithMany("PlantCareSchedules")
+                        .HasForeignKey("CareActivityId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("plant_manager.Data.Models.Plant", "Plant")
                         .WithMany("CareSchedules")
                         .HasForeignKey("PlantId")
@@ -353,6 +516,8 @@ namespace plant_manager.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("CareAction");
+
+                    b.Navigation("CareActivity");
 
                     b.Navigation("Plant");
                 });
@@ -384,13 +549,31 @@ namespace plant_manager.Data.Migrations
             modelBuilder.Entity("plant_manager.Data.Models.ActionResource", b =>
                 {
                     b.Navigation("ActionLogResources");
+
+                    b.Navigation("CareActivityActionResources");
                 });
 
             modelBuilder.Entity("plant_manager.Data.Models.CareAction", b =>
                 {
                     b.Navigation("ActionLogs");
 
+                    b.Navigation("CareActivityActions");
+
                     b.Navigation("PlantCareSchedules");
+                });
+
+            modelBuilder.Entity("plant_manager.Data.Models.CareActivity", b =>
+                {
+                    b.Navigation("ActionLogs");
+
+                    b.Navigation("Actions");
+
+                    b.Navigation("PlantCareSchedules");
+                });
+
+            modelBuilder.Entity("plant_manager.Data.Models.CareActivityAction", b =>
+                {
+                    b.Navigation("Resources");
                 });
 
             modelBuilder.Entity("plant_manager.Data.Models.Plant", b =>
@@ -405,6 +588,11 @@ namespace plant_manager.Data.Migrations
             modelBuilder.Entity("plant_manager.Data.Models.PlantFlagDefinition", b =>
                 {
                     b.Navigation("PlantFlags");
+                });
+
+            modelBuilder.Entity("plant_manager.Data.Models.PlantLocation", b =>
+                {
+                    b.Navigation("Plants");
                 });
 #pragma warning restore 612, 618
         }

@@ -6,20 +6,12 @@ namespace plant_manager.Endpoints
 {
     public static class PlantFlagEndpoints
     {
-        private static readonly HashSet<string> ValidSeverities = new(StringComparer.OrdinalIgnoreCase)
-        {
-            "low",
-            "medium",
-            "high"
-        };
-
         public static void MapPlantFlagEndpoints(this WebApplication app)
         {
             app.MapGet("/api/plant-flags", async (ApplicationDbContext db) =>
             {
                 var definitions = await db.PlantFlagDefinitions
                     .OrderByDescending(definition => definition.IsEnabled)
-                    .ThenBy(definition => definition.Category)
                     .ThenBy(definition => definition.Name)
                     .Select(definition => PlantFlagDefinitionDto.FromDefinition(definition))
                     .ToListAsync();
@@ -45,7 +37,6 @@ namespace plant_manager.Endpoints
                 var definition = new PlantFlagDefinition
                 {
                     Name = name,
-                    Category = NormalizeCategory(request.Category),
                     Color = NormalizeColor(request.Color),
                     IsEnabled = request.IsEnabled
                 };
@@ -78,7 +69,6 @@ namespace plant_manager.Endpoints
                 }
 
                 definition.Name = name;
-                definition.Category = NormalizeCategory(request.Category);
                 definition.Color = NormalizeColor(request.Color);
                 definition.IsEnabled = request.IsEnabled;
 
@@ -140,7 +130,6 @@ namespace plant_manager.Endpoints
                     PlantId = plantId,
                     PlantFlagDefinitionId = request.PlantFlagDefinitionId,
                     Definition = definition,
-                    Severity = NormalizeSeverity(request.Severity),
                     StartedOn = request.StartedOn ?? DateOnly.FromDateTime(DateTime.UtcNow),
                     Notes = NormalizeNotes(request.Notes)
                 };
@@ -165,7 +154,6 @@ namespace plant_manager.Endpoints
                     return Results.NotFound();
                 }
 
-                flag.Severity = NormalizeSeverity(request.Severity);
                 flag.StartedOn = request.StartedOn ?? flag.StartedOn;
                 flag.ResolvedOn = request.ResolvedOn;
                 flag.Notes = NormalizeNotes(request.Notes);
@@ -213,22 +201,8 @@ namespace plant_manager.Endpoints
             });
         }
 
-        private static string NormalizeCategory(string? category) =>
-            string.IsNullOrWhiteSpace(category) ? "General" : category.Trim();
-
         private static string NormalizeColor(string? color) =>
             string.IsNullOrWhiteSpace(color) ? "#f2f2f2" : color.Trim();
-
-        private static string NormalizeSeverity(string? severity)
-        {
-            if (string.IsNullOrWhiteSpace(severity))
-            {
-                return "medium";
-            }
-
-            var normalized = severity.Trim().ToLower();
-            return ValidSeverities.Contains(normalized) ? normalized : "medium";
-        }
 
         private static string? NormalizeNotes(string? notes) =>
             string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();

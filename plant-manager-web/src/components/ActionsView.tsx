@@ -1,4 +1,4 @@
-import { Edit3, Plus, Save, Trash2, X } from 'lucide-react';
+import { Edit3, Eye, Plus, Save, Trash2, X } from 'lucide-react';
 import type { CareAction } from '../domain';
 import type { ActionFormState } from '../form-state';
 
@@ -10,11 +10,14 @@ type ActionsViewProps = {
   isEditorOpen: boolean;
   isLoading: boolean;
   isSaving: boolean;
+  selectedAction?: CareAction;
   onCancel: () => void;
+  onCloseDetail: () => void;
   onDelete: (action: CareAction) => void;
   onEdit: (action: CareAction) => void;
   onFieldChange: (field: keyof ActionFormState, value: string | boolean) => void;
   onNew: () => void;
+  onOpenDetail: (action: CareAction) => void;
   onSave: () => void;
 };
 
@@ -26,11 +29,14 @@ export function ActionsView({
   isEditorOpen,
   isLoading,
   isSaving,
+  selectedAction,
   onCancel,
+  onCloseDetail,
   onDelete,
   onEdit,
   onFieldChange,
   onNew,
+  onOpenDetail,
   onSave,
 }: ActionsViewProps) {
   const enabledCount = actions.filter((action) => action.isEnabled).length;
@@ -50,6 +56,35 @@ export function ActionsView({
           New action
         </button>
       </section>
+
+      {selectedAction && !isEditorOpen ? (
+        <section className="editor-panel" aria-labelledby="action-detail-heading">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Action detail</p>
+              <h2 id="action-detail-heading">{selectedAction.name}</h2>
+            </div>
+            <div className="row-actions">
+              <button className="icon-button compact" type="button" aria-label={`Edit ${selectedAction.name}`} onClick={() => onEdit(selectedAction)}>
+                <Edit3 size={17} />
+              </button>
+              <button className="icon-button compact" type="button" aria-label="Close action detail" onClick={onCloseDetail}>
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+          <div className="plant-detail-meta">
+            <div>
+              <span>Description</span>
+              <strong>{selectedAction.description ?? 'No description'}</strong>
+            </div>
+            <div>
+              <span>Status</span>
+              <strong>{selectedAction.isEnabled ? 'Enabled' : 'Disabled'}</strong>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {isEditorOpen ? (
       <section className="editor-panel" aria-labelledby="action-editor-heading">
@@ -121,6 +156,9 @@ export function ActionsView({
                 </p>
               </div>
               <div className="row-actions">
+                <button className="icon-button compact" type="button" aria-label={`View ${action.name}`} onClick={() => onOpenDetail(action)}>
+                  <Eye size={17} />
+                </button>
                 <button className="icon-button compact" type="button" aria-label={`Edit ${action.name}`} onClick={() => onEdit(action)}>
                   <Edit3 size={17} />
                 </button>

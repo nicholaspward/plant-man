@@ -1,4 +1,4 @@
-import { Edit3, Plus, Save, Trash2, X } from 'lucide-react';
+import { Edit3, Eye, Plus, Save, Trash2, X } from 'lucide-react';
 import type { PlantTaxon } from '../domain';
 import type { TaxonFormState } from '../form-state';
 import { formatTaxon } from '../form-state';
@@ -10,12 +10,15 @@ type TaxaViewProps = {
   isEditorOpen: boolean;
   isLoading: boolean;
   isSaving: boolean;
+  selectedTaxon?: PlantTaxon;
   taxa: PlantTaxon[];
   onCancel: () => void;
+  onCloseDetail: () => void;
   onDelete: (taxon: PlantTaxon) => void;
   onEdit: (taxon: PlantTaxon) => void;
   onFieldChange: (field: keyof TaxonFormState, value: string) => void;
   onNew: () => void;
+  onOpenDetail: (taxon: PlantTaxon) => void;
   onSave: () => void;
 };
 
@@ -26,12 +29,15 @@ export function TaxaView({
   isEditorOpen,
   isLoading,
   isSaving,
+  selectedTaxon,
   taxa,
   onCancel,
+  onCloseDetail,
   onDelete,
   onEdit,
   onFieldChange,
   onNew,
+  onOpenDetail,
   onSave,
 }: TaxaViewProps) {
   return (
@@ -49,6 +55,51 @@ export function TaxaView({
           New taxon
         </button>
       </section>
+
+      {selectedTaxon && !isEditorOpen ? (
+        <section className="editor-panel" aria-labelledby="taxon-detail-heading">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Taxon detail</p>
+              <h2 id="taxon-detail-heading">{formatTaxon(selectedTaxon)}</h2>
+            </div>
+            <div className="row-actions">
+              <button className="icon-button compact" type="button" aria-label={`Edit ${selectedTaxon.name}`} onClick={() => onEdit(selectedTaxon)}>
+                <Edit3 size={17} />
+              </button>
+              <button className="icon-button compact" type="button" aria-label="Close taxon detail" onClick={onCloseDetail}>
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+          <div className="plant-detail-meta">
+            <div>
+              <span>Common name</span>
+              <strong>{selectedTaxon.name}</strong>
+            </div>
+            <div>
+              <span>Genus</span>
+              <strong>{selectedTaxon.genus}</strong>
+            </div>
+            <div>
+              <span>Species</span>
+              <strong>{selectedTaxon.species}</strong>
+            </div>
+            <div>
+              <span>Cultivar</span>
+              <strong>{selectedTaxon.cultivar ?? 'None'}</strong>
+            </div>
+            <div>
+              <span>Variety</span>
+              <strong>{selectedTaxon.variety ?? 'None'}</strong>
+            </div>
+            <div>
+              <span>Authority</span>
+              <strong>{selectedTaxon.authority ?? 'None'}</strong>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {isEditorOpen ? (
       <section className="editor-panel" aria-labelledby="taxon-editor-heading">
@@ -132,10 +183,12 @@ export function TaxaView({
           {taxa.map((taxon) => (
             <article className="plant-row" key={taxon.id}>
               <div>
-                <h3>{taxon.name}</h3>
-                <p>{formatTaxon(taxon)}</p>
+                <h3>{formatTaxon(taxon)}</h3>
               </div>
               <div className="row-actions">
+                <button className="icon-button compact" type="button" aria-label={`View ${taxon.name}`} onClick={() => onOpenDetail(taxon)}>
+                  <Eye size={17} />
+                </button>
                 <button className="icon-button compact" type="button" aria-label={`Edit ${taxon.name}`} onClick={() => onEdit(taxon)}>
                   <Edit3 size={17} />
                 </button>

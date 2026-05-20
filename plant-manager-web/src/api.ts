@@ -1,17 +1,21 @@
 import type {
   ActionResource,
   ActionResourcePayload,
-  ActionLog,
+  CareActivity,
+  CareActivityPayload,
   CareAction,
   CareActionPayload,
-  CareLogPayload,
+  BulkCompleteCareTasksPayload,
   CareTask,
+  BulkPlantCareSchedulePayload,
   Plant,
   AssignPlantFlagPayload,
   PlantPayload,
   PlantFlag,
   PlantFlagDefinition,
   PlantFlagDefinitionPayload,
+  PlantLocation,
+  PlantLocationPayload,
   PlantTaxon,
   PlantTaxonPayload,
 } from './domain';
@@ -44,6 +48,30 @@ export async function getPlants() {
 
 export async function getPlantTaxa() {
   return request<PlantTaxon[]>('/api/plant-taxa');
+}
+
+export async function getPlantLocations() {
+  return request<PlantLocation[]>('/api/plant-locations');
+}
+
+export async function createPlantLocation(payload: PlantLocationPayload) {
+  return request<PlantLocation>('/api/plant-locations', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updatePlantLocation(id: number, payload: PlantLocationPayload) {
+  return request<PlantLocation>(`/api/plant-locations/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deletePlantLocation(id: number) {
+  return request<void>(`/api/plant-locations/${id}`, {
+    method: 'DELETE',
+  });
 }
 
 export async function createPlantTaxon(payload: PlantTaxonPayload) {
@@ -110,6 +138,30 @@ export async function updateActionResource(id: number, payload: ActionResourcePa
 
 export async function deleteActionResource(id: number) {
   return request<void>(`/api/action-resources/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function getCareActivities() {
+  return request<CareActivity[]>('/api/care-activities');
+}
+
+export async function createCareActivity(payload: CareActivityPayload) {
+  return request<CareActivity>('/api/care-activities', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateCareActivity(id: number, payload: CareActivityPayload) {
+  return request<CareActivity>(`/api/care-activities/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteCareActivity(id: number) {
+  return request<void>(`/api/care-activities/${id}`, {
     method: 'DELETE',
   });
 }
@@ -181,29 +233,16 @@ export async function getCareTasks() {
   return request<CareTask[]>('/api/care-tasks/upcoming');
 }
 
-export async function getActionLogs() {
-  return request<ActionLog[]>('/api/action-logs');
-}
-
-export async function logCare(payload: CareLogPayload) {
-  return request('/api/action-logs', {
+export async function savePlantCareSchedulesBulk(payload: BulkPlantCareSchedulePayload) {
+  return request<{ updated: number }>('/api/plant-care-schedules/bulk', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
 }
 
-export async function updateActionLog(id: number, payload: CareLogPayload) {
-  return request<ActionLog>(`/api/action-logs/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      ...payload,
-      performedOn: payload.performedOn ?? new Date().toISOString().slice(0, 10),
-    }),
-  });
-}
-
-export async function deleteActionLog(id: number) {
-  return request<void>(`/api/action-logs/${id}`, {
-    method: 'DELETE',
+export async function completeCareTasksBulk(payload: BulkCompleteCareTasksPayload) {
+  return request<{ completed: number }>('/api/care-tasks/complete-bulk', {
+    method: 'POST',
+    body: JSON.stringify(payload),
   });
 }

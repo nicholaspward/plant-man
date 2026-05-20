@@ -12,8 +12,18 @@ namespace plant_manager.Endpoints
             {
                 var plants = await db.Plants
                     .Include(plant => plant.Taxon)
+                    .Include(plant => plant.Location)
                     .Include(plant => plant.CareSchedules)
                     .ThenInclude(schedule => schedule.CareAction)
+                    .Include(plant => plant.CareSchedules)
+                    .ThenInclude(schedule => schedule.CareActivity)
+                    .ThenInclude(activity => activity.Actions)
+                    .ThenInclude(action => action.CareAction)
+                    .Include(plant => plant.CareSchedules)
+                    .ThenInclude(schedule => schedule.CareActivity)
+                    .ThenInclude(activity => activity.Actions)
+                    .ThenInclude(action => action.Resources)
+                    .ThenInclude(resource => resource.ActionResource)
                     .Include(plant => plant.ActionLogs)
                     .Include(plant => plant.Flags)
                     .ThenInclude(flag => flag.Definition)
@@ -27,8 +37,18 @@ namespace plant_manager.Endpoints
             {
                 var plant = await db.Plants
                     .Include(item => item.Taxon)
+                    .Include(item => item.Location)
                     .Include(plant => plant.CareSchedules)
                     .ThenInclude(schedule => schedule.CareAction)
+                    .Include(plant => plant.CareSchedules)
+                    .ThenInclude(schedule => schedule.CareActivity)
+                    .ThenInclude(activity => activity.Actions)
+                    .ThenInclude(action => action.CareAction)
+                    .Include(plant => plant.CareSchedules)
+                    .ThenInclude(schedule => schedule.CareActivity)
+                    .ThenInclude(activity => activity.Actions)
+                    .ThenInclude(action => action.Resources)
+                    .ThenInclude(resource => resource.ActionResource)
                     .Include(plant => plant.ActionLogs)
                     .Include(plant => plant.Flags)
                     .ThenInclude(flag => flag.Definition)
@@ -46,24 +66,33 @@ namespace plant_manager.Endpoints
                     return Results.BadRequest(new { error = "Nickname is required." });
                 }
 
-                var taxon = await db.PlantTaxa.FindAsync(request.TaxonId);
-                if (taxon is null)
+                var taxon = request.TaxonId is null ? null : await db.PlantTaxa.FindAsync(request.TaxonId);
+                if (request.TaxonId is not null && taxon is null)
                 {
                     return Results.BadRequest(new { error = "Taxon was not found." });
+                }
+
+                var location = request.LocationId is null ? null : await db.PlantLocations.FindAsync(request.LocationId);
+                if (request.LocationId is not null && location is null)
+                {
+                    return Results.BadRequest(new { error = "Location was not found." });
                 }
 
                 var plant = new Plant
                 {
                     Nickname = request.Nickname.Trim(),
-                    Location = string.IsNullOrWhiteSpace(request.Location) ? "Unassigned" : request.Location.Trim(),
-                    TaxonId = request.TaxonId
+                    TaxonId = request.TaxonId,
+                    LocationId = request.LocationId
                 };
 
                 db.Plants.Add(plant);
                 await db.SaveChangesAsync();
 
                 plant.Taxon = taxon;
-                var scheduleError = await ApplyCareSchedules(plant, request.CareSchedules, db);
+                plant.Location = location;
+                var scheduleError = request.CareSchedules is null
+                    ? null
+                    : await ApplyCareSchedules(plant, request.CareSchedules, db);
                 if (scheduleError is not null)
                 {
                     return Results.BadRequest(new { error = scheduleError });
@@ -83,8 +112,18 @@ namespace plant_manager.Endpoints
 
                 var plant = await db.Plants
                     .Include(item => item.Taxon)
+                    .Include(item => item.Location)
                     .Include(item => item.CareSchedules)
                     .ThenInclude(schedule => schedule.CareAction)
+                    .Include(item => item.CareSchedules)
+                    .ThenInclude(schedule => schedule.CareActivity)
+                    .ThenInclude(activity => activity.Actions)
+                    .ThenInclude(action => action.CareAction)
+                    .Include(item => item.CareSchedules)
+                    .ThenInclude(schedule => schedule.CareActivity)
+                    .ThenInclude(activity => activity.Actions)
+                    .ThenInclude(action => action.Resources)
+                    .ThenInclude(resource => resource.ActionResource)
                     .Include(item => item.ActionLogs)
                     .Include(item => item.Flags)
                     .ThenInclude(flag => flag.Definition)
@@ -95,17 +134,26 @@ namespace plant_manager.Endpoints
                     return Results.NotFound();
                 }
 
-                var taxon = await db.PlantTaxa.FindAsync(request.TaxonId);
-                if (taxon is null)
+                var taxon = request.TaxonId is null ? null : await db.PlantTaxa.FindAsync(request.TaxonId);
+                if (request.TaxonId is not null && taxon is null)
                 {
                     return Results.BadRequest(new { error = "Taxon was not found." });
                 }
 
+                var location = request.LocationId is null ? null : await db.PlantLocations.FindAsync(request.LocationId);
+                if (request.LocationId is not null && location is null)
+                {
+                    return Results.BadRequest(new { error = "Location was not found." });
+                }
+
                 plant.Nickname = request.Nickname.Trim();
-                plant.Location = string.IsNullOrWhiteSpace(request.Location) ? "Unassigned" : request.Location.Trim();
                 plant.TaxonId = request.TaxonId;
+                plant.LocationId = request.LocationId;
                 plant.Taxon = taxon;
-                var scheduleError = await ApplyCareSchedules(plant, request.CareSchedules, db);
+                plant.Location = location;
+                var scheduleError = request.CareSchedules is null
+                    ? null
+                    : await ApplyCareSchedules(plant, request.CareSchedules, db);
                 if (scheduleError is not null)
                 {
                     return Results.BadRequest(new { error = scheduleError });
@@ -139,9 +187,9 @@ namespace plant_manager.Endpoints
             var schedules = requestedSchedules?.ToList();
             if (schedules is null)
             {
-                var waterAction = await db.CareActions
-                    .FirstOrDefaultAsync(action => action.Name.ToLower() == "water");
-                if (waterAction is null)
+                var waterActivity = await db.CareActivities
+                    .FirstOrDefaultAsync(activity => activity.Name.ToLower() == "water");
+                if (waterActivity is null)
                 {
                     return null;
                 }
@@ -149,50 +197,71 @@ namespace plant_manager.Endpoints
                 schedules =
                 [
                     new SavePlantCareScheduleRequest(
-                        waterAction.Id,
+                        waterActivity.Id,
                         7,
                         true)
                 ];
             }
 
             var normalizedSchedules = schedules
-                .GroupBy(schedule => schedule.CareActionId)
+                .GroupBy(schedule => schedule.CareActivityId)
                 .Select(group => group.First())
-                .Where(schedule => schedule.CareActionId > 0)
+                .Where(schedule => schedule.CareActivityId > 0)
                 .ToList();
-            var actionIds = normalizedSchedules
-                .Select(schedule => schedule.CareActionId)
+            var activityIds = normalizedSchedules
+                .Select(schedule => schedule.CareActivityId)
                 .ToList();
-            var actionsById = await db.CareActions
-                .Where(action => actionIds.Contains(action.Id))
-                .ToDictionaryAsync(action => action.Id);
+            var activitiesById = await db.CareActivities
+                .Include(activity => activity.Actions)
+                .ThenInclude(action => action.CareAction)
+                .Include(activity => activity.Actions)
+                .ThenInclude(action => action.Resources)
+                .ThenInclude(resource => resource.ActionResource)
+                .Where(activity => activityIds.Contains(activity.Id))
+                .ToDictionaryAsync(activity => activity.Id);
 
-            if (actionsById.Count != actionIds.Count)
+            if (activitiesById.Count != activityIds.Count)
             {
-                return "One or more care actions were not found.";
+                return "One or more care activities were not found.";
             }
 
-            var requestedActionIds = actionIds.ToHashSet();
+            if (activitiesById.Values.Any(activity =>
+                !activity.IsEnabled
+                || activity.PrimaryAction() is null
+                || activity.Actions.Any(action => !action.CareAction.IsEnabled)))
+            {
+                return "Disabled activities cannot be scheduled.";
+            }
+
+            var requestedActivityIds = activityIds.ToHashSet();
             var schedulesToRemove = plant.CareSchedules
-                .Where(schedule => !requestedActionIds.Contains(schedule.CareActionId))
+                .Where(schedule => !requestedActivityIds.Contains(schedule.CareActivityId))
                 .ToList();
             db.PlantCareSchedules.RemoveRange(schedulesToRemove);
 
             foreach (var requestedSchedule in normalizedSchedules)
             {
+                var activity = activitiesById[requestedSchedule.CareActivityId];
+                var primaryAction = activity.PrimaryAction()!;
                 var schedule = plant.CareSchedules
-                    .FirstOrDefault(item => item.CareActionId == requestedSchedule.CareActionId);
+                    .FirstOrDefault(item => item.CareActivityId == requestedSchedule.CareActivityId);
                 if (schedule is null)
                 {
                     schedule = new PlantCareSchedule
                     {
                         PlantId = plant.Id,
-                        CareActionId = requestedSchedule.CareActionId,
-                        CareAction = actionsById[requestedSchedule.CareActionId]
+                        CareActionId = primaryAction.Id,
+                        CareActivityId = activity.Id,
+                        CareAction = primaryAction,
+                        CareActivity = activity
                     };
                     plant.CareSchedules.Add(schedule);
                 }
 
+                schedule.CareActionId = primaryAction.Id;
+                schedule.CareActivityId = activity.Id;
+                schedule.CareAction = primaryAction;
+                schedule.CareActivity = activity;
                 schedule.EveryDays = Math.Clamp(requestedSchedule.EveryDays ?? 7, 1, 365);
                 schedule.IsEnabled = requestedSchedule.IsEnabled;
             }
