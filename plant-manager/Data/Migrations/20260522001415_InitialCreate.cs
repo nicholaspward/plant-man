@@ -231,6 +231,14 @@ namespace plant_manager.Data.Migrations
                     CareActionId = table.Column<int>(type: "INTEGER", nullable: false),
                     CareActivityId = table.Column<int>(type: "INTEGER", nullable: false),
                     EveryDays = table.Column<int>(type: "INTEGER", nullable: false),
+                    ScheduledFor = table.Column<DateOnly>(type: "TEXT", nullable: true),
+                    RecurrenceMode = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                    RepeatEvery = table.Column<int>(type: "INTEGER", nullable: false),
+                    RepeatUnit = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                    RepeatOnDays = table.Column<string>(type: "TEXT", maxLength: 40, nullable: true),
+                    EndsMode = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                    EndsOn = table.Column<DateOnly>(type: "TEXT", nullable: true),
+                    EndsAfterOccurrences = table.Column<int>(type: "INTEGER", nullable: true),
                     IsEnabled = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>

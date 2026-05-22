@@ -199,6 +199,14 @@ namespace plant_manager.Endpoints
                     new SavePlantCareScheduleRequest(
                         waterActivity.Id,
                         7,
+                        null,
+                        "weekly",
+                        1,
+                        "week",
+                        null,
+                        "after",
+                        null,
+                        12,
                         true)
                 ];
             }
@@ -262,7 +270,16 @@ namespace plant_manager.Endpoints
                 schedule.CareActivityId = activity.Id;
                 schedule.CareAction = primaryAction;
                 schedule.CareActivity = activity;
-                schedule.EveryDays = Math.Clamp(requestedSchedule.EveryDays ?? 7, 1, 365);
+                PlantCareScheduleEndpoints.ApplyRecurrence(schedule, PlantCareScheduleEndpoints.NormalizeRecurrence(
+                    requestedSchedule.RecurrenceMode,
+                    requestedSchedule.RepeatEvery,
+                    requestedSchedule.RepeatUnit,
+                    requestedSchedule.RepeatOnDays,
+                    requestedSchedule.EndsMode,
+                    requestedSchedule.EndsOn,
+                    requestedSchedule.EndsAfterOccurrences,
+                    requestedSchedule.ScheduledFor,
+                    requestedSchedule.EveryDays));
                 schedule.IsEnabled = requestedSchedule.IsEnabled;
             }
 

@@ -34,17 +34,22 @@ namespace plant_manager.Endpoints
                     {
                         group.Key.PlantId,
                         group.Key.CareActivityId,
-                        LastPerformedOn = group.Max(log => log.PerformedOn)
+                        LastPerformedOn = group.Max(log => log.PerformedOn),
+                        CompletedOccurrences = group.Count()
                     })
                     .ToListAsync();
                 var latestLogLookup = latestLogs.ToDictionary(
                     log => (log.PlantId, log.CareActivityId),
                     log => (DateOnly?)log.LastPerformedOn);
+                var completedLookup = latestLogs.ToDictionary(
+                    log => (log.PlantId, log.CareActivityId),
+                    log => log.CompletedOccurrences);
 
                 var tasks = schedules
                     .Select(schedule => CareTaskDto.FromSchedule(
                         schedule,
                         latestLogLookup.GetValueOrDefault((schedule.PlantId, schedule.CareActivityId)),
+                        completedLookup.GetValueOrDefault((schedule.PlantId, schedule.CareActivityId)),
                         today))
                     .Where(task => task.Status is "due" or "soon")
                     .ToList();
@@ -108,18 +113,23 @@ namespace plant_manager.Endpoints
                     .Select(group => new
                     {
                         PlantId = group.Key,
-                        LastPerformedOn = group.Max(log => log.PerformedOn)
+                        LastPerformedOn = group.Max(log => log.PerformedOn),
+                        CompletedOccurrences = group.Count()
                     })
                     .ToListAsync();
                 var latestLogLookup = latestLogs.ToDictionary(
                     log => log.PlantId,
                     log => (DateOnly?)log.LastPerformedOn);
+                var completedLookup = latestLogs.ToDictionary(
+                    log => log.PlantId,
+                    log => log.CompletedOccurrences);
                 var duePlantIds = schedules
                     .Where(schedule =>
                         PlantCareFormatter.GetStatus(
                             PlantCareFormatter.GetNextCareDate(
+                                schedule,
                                 latestLogLookup.GetValueOrDefault(schedule.PlantId),
-                                schedule.EveryDays),
+                                completedLookup.GetValueOrDefault(schedule.PlantId)),
                             today) == "due")
                     .Select(schedule => schedule.PlantId)
                     .ToHashSet();

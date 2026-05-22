@@ -1,4 +1,5 @@
-import { Save } from 'lucide-react';
+import { CalendarClock, Save, Trash2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import type { CareActivity, Plant } from '../domain';
 import type { BulkScheduleFormState } from '../form-state';
 
@@ -10,8 +11,28 @@ type SchedulesViewProps = {
   isSaving: boolean;
   plants: Plant[];
   onFieldChange: (field: keyof BulkScheduleFormState, value: string | boolean | string[]) => void;
+  onRemove: () => void;
   onSave: () => void;
 };
+
+const recurrenceOptions = [
+  { value: 'none', label: 'Does not repeat' },
+  { value: 'daily', label: 'Every day' },
+  { value: 'weekly', label: 'Every week' },
+  { value: 'monthly', label: 'Every month' },
+  { value: 'yearly', label: 'Every year' },
+  { value: 'custom', label: 'Custom' },
+];
+
+const weekdayOptions = [
+  { value: 'SU', label: 'S' },
+  { value: 'MO', label: 'M' },
+  { value: 'TU', label: 'T' },
+  { value: 'WE', label: 'W' },
+  { value: 'TH', label: 'T' },
+  { value: 'FR', label: 'F' },
+  { value: 'SA', label: 'S' },
+];
 
 export function SchedulesView({
   activities,
@@ -21,11 +42,23 @@ export function SchedulesView({
   isSaving,
   plants,
   onFieldChange,
+  onRemove,
   onSave,
 }: SchedulesViewProps) {
+  const [plantQuery, setPlantQuery] = useState('');
   const enabledActivities = activities.filter((activity) => activity.isEnabled);
+  const visiblePlants = useMemo(
+    () => filterPlants(plants, plantQuery),
+    [plants, plantQuery],
+  );
   const selectedPlantIds = new Set(form.plantIds);
-  const allVisibleSelected = plants.length > 0 && plants.every((plant) => selectedPlantIds.has(String(plant.id)));
+  const selectedPlants = plants.filter((plant) => selectedPlantIds.has(String(plant.id)));
+  const selectedActivity = activities.find((activity) => String(activity.id) === form.careActivityId);
+  const preview = selectedActivity ? formatSchedulePreview(selectedActivity.name, form) : '';
+  const allVisibleSelected = visiblePlants.length > 0 && visiblePlants.every((plant) => selectedPlantIds.has(String(plant.id)));
+  const selectedPlantsWithActivity = selectedActivity
+    ? selectedPlants.filter((plant) => plant.careSchedules.some((schedule) => schedule.careActivityId === selectedActivity.id))
+    : [];
 
   return (
     <>
@@ -33,17 +66,21 @@ export function SchedulesView({
         <div>
           <p className="eyebrow">Care schedules</p>
           <h2 id="schedules-summary-heading">
-            {isLoading ? 'Loading schedules' : 'Bulk schedule assignment'}
+            {isLoading ? 'Loading schedules' : 'Scheduler'}
           </h2>
-          <p>{error ?? 'Apply one care interval to several plants at once.'}</p>
+          <p>{error ?? 'Review current schedules, choose target plants, and apply care intervals.'}</p>
         </div>
       </section>
 
       <section className="editor-panel" aria-labelledby="bulk-schedule-heading">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Bulk edit</p>
-            <h2 id="bulk-schedule-heading">Apply schedule</h2>
+            <p className="eyebrow">Schedule rule</p>
+            <h2 id="bulk-schedule-heading">Apply activity interval</h2>
+          </div>
+          <div className="schedule-count">
+            <CalendarClock size={16} />
+            <span>{selectedPlants.length} selected</span>
           </div>
         </div>
 
@@ -51,6 +88,7 @@ export function SchedulesView({
           <label>
             Activity
             <select
+              disabled={isSaving}
               value={form.careActivityId}
               onChange={(event) => onFieldChange('careActivityId', event.target.value)}
             >
@@ -63,18 +101,18 @@ export function SchedulesView({
             </select>
           </label>
           <label>
-            Every days
+            Start date
             <input
-              min="1"
-              max="365"
-              type="number"
-              value={form.everyDays}
-              onChange={(event) => onFieldChange('everyDays', event.target.value)}
+              disabled={isSaving}
+              type="date"
+              value={form.scheduledFor}
+              onChange={(event) => onFieldChange('scheduledFor', event.target.value)}
             />
           </label>
           <label className="toggle-field">
             <input
               checked={form.isEnabled}
+              disabled={isSaving}
               type="checkbox"
               onChange={(event) => onFieldChange('isEnabled', event.target.checked)}
             />
@@ -82,31 +120,181 @@ export function SchedulesView({
           </label>
         </div>
 
-        <div className="section" aria-labelledby="bulk-schedule-plants-heading">
+        <fieldset className="schedule-options">
+          <legend>Repeat</legend>
+          {recurrenceOptions.map((option) => (
+            <label className="check-option" key={option.value}>
+              <input
+                checked={form.recurrenceMode === option.value}
+                disabled={isSaving}
+                type="radio"
+                name="recurrenceMode"
+                value={option.value}
+                onChange={(event) => onFieldChange('recurrenceMode', event.target.value)}
+              />
+              {option.label}
+            </label>
+          ))}
+        </fieldset>
+
+        {form.recurrenceMode === 'custom' ? (
+          <div className="custom-schedule-options">
+            <div className="repeat-every-row">
+              <span>Repeats every</span>
+              <input
+                disabled={isSaving}
+                min="1"
+                max="365"
+                type="number"
+                value={form.repeatEvery}
+                onChange={(event) => onFieldChange('repeatEvery', event.target.value)}
+              />
+              <select
+                disabled={isSaving}
+                value={form.repeatUnit}
+                onChange={(event) => onFieldChange('repeatUnit', event.target.value)}
+              >
+                <option value="day">day</option>
+                <option value="week">week</option>
+                <option value="month">month</option>
+                <option value="year">year</option>
+              </select>
+            </div>
+
+            {form.repeatUnit === 'week' ? (
+              <fieldset className="weekday-options">
+                <legend>Repeats on</legend>
+                {weekdayOptions.map((day) => (
+                  <label key={day.value}>
+                    <input
+                      checked={form.repeatOnDays.includes(day.value)}
+                      disabled={isSaving}
+                      type="checkbox"
+                      onChange={(event) => {
+                        const nextDays = event.target.checked
+                          ? [...form.repeatOnDays, day.value]
+                          : form.repeatOnDays.filter((value) => value !== day.value);
+                        onFieldChange('repeatOnDays', nextDays);
+                      }}
+                    />
+                    <span>{day.label}</span>
+                  </label>
+                ))}
+              </fieldset>
+            ) : null}
+          </div>
+        ) : null}
+
+        {form.recurrenceMode !== 'none' ? (
+          <fieldset className="schedule-end-options">
+            <legend>Ends</legend>
+            <label className="check-option">
+              <input
+                checked={form.endsMode === 'on'}
+                disabled={isSaving}
+                type="radio"
+                name="endsMode"
+                value="on"
+                onChange={(event) => onFieldChange('endsMode', event.target.value)}
+              />
+              On date
+            </label>
+            {form.endsMode === 'on' ? (
+              <input
+                aria-label="End date"
+                disabled={isSaving}
+                type="date"
+                value={form.endsOn}
+                onChange={(event) => onFieldChange('endsOn', event.target.value)}
+              />
+            ) : null}
+            <label className="check-option">
+              <input
+                checked={form.endsMode === 'after'}
+                disabled={isSaving}
+                type="radio"
+                name="endsMode"
+                value="after"
+                onChange={(event) => onFieldChange('endsMode', event.target.value)}
+              />
+              After
+            </label>
+            {form.endsMode === 'after' ? (
+              <input
+                aria-label="Occurrences"
+                disabled={isSaving}
+                min="1"
+                max="999"
+                type="number"
+                value={form.endsAfterOccurrences}
+                onChange={(event) => onFieldChange('endsAfterOccurrences', event.target.value)}
+              />
+            ) : null}
+          </fieldset>
+        ) : null}
+
+        {selectedActivity ? (
+          <p className="schedule-hint">
+            {selectedPlantsWithActivity.length} of {selectedPlants.length} selected plants already have {selectedActivity.name}.
+          </p>
+        ) : null}
+
+        {preview ? (
+          <div className="schedule-preview" aria-label="Schedule preview">
+            <span>Preview</span>
+            <strong>{preview}</strong>
+          </div>
+        ) : null}
+
+        <div className="section schedule-targets" aria-labelledby="bulk-schedule-plants-heading">
           <div className="section-heading">
-            <h2 id="bulk-schedule-plants-heading">Plants</h2>
-            <button
-              className="text-button"
-              type="button"
-              onClick={() => onFieldChange(
-                'plantIds',
-                allVisibleSelected ? [] : plants.map((plant) => String(plant.id)),
-              )}
-            >
-              {allVisibleSelected ? 'Clear all' : 'Select all'}
-            </button>
+            <div>
+              <p className="eyebrow">Targets</p>
+              <h2 id="bulk-schedule-plants-heading">Plants</h2>
+            </div>
+            <div className="row-actions">
+              <button
+                className="text-button"
+                type="button"
+                disabled={isSaving}
+                onClick={() => onFieldChange(
+                  'plantIds',
+                  allVisibleSelected
+                    ? form.plantIds.filter((id) => !visiblePlants.some((plant) => String(plant.id) === id))
+                    : [...new Set([...form.plantIds, ...visiblePlants.map((plant) => String(plant.id))])],
+                )}
+              >
+                {allVisibleSelected ? 'Clear visible' : 'Select visible'}
+              </button>
+            </div>
           </div>
 
-          <div className="plant-list">
+          <label className="compact-search">
+            <span className="sr-only">Search target plants</span>
+            <input
+              disabled={isSaving}
+              type="search"
+              value={plantQuery}
+              placeholder="Search plants"
+              onChange={(event) => setPlantQuery(event.target.value)}
+            />
+          </label>
+
+          <div className="plant-list compact-plant-list">
             {!isLoading && plants.length === 0 ? (
               <p className="empty-state">No plants available.</p>
             ) : null}
 
-            {plants.map((plant) => (
+            {!isLoading && plants.length > 0 && visiblePlants.length === 0 ? (
+              <p className="empty-state">No plants match that search.</p>
+            ) : null}
+
+            {visiblePlants.map((plant) => (
               <label className="plant-row check-row" key={plant.id}>
                 <span>
                   <input
                     checked={selectedPlantIds.has(String(plant.id))}
+                    disabled={isSaving}
                     type="checkbox"
                     onChange={(event) => {
                       const plantId = String(plant.id);
@@ -116,10 +304,8 @@ export function SchedulesView({
                       onFieldChange('plantIds', nextPlantIds);
                     }}
                   />
-                  <span>
-                    <strong>{plant.nickname}</strong>
-                    <small>{plant.taxon} - {plant.location}</small>
-                  </span>
+                  <strong>{plant.nickname}</strong>
+                  <small>{formatPlantScheduleSummary(plant, selectedActivity)}</small>
                 </span>
               </label>
             ))}
@@ -131,8 +317,129 @@ export function SchedulesView({
             <Save size={18} />
             {isSaving ? 'Saving' : `Apply to ${form.plantIds.length} plants`}
           </button>
+          <button className="text-button danger" type="button" disabled={isSaving || form.plantIds.length === 0 || !form.careActivityId} onClick={onRemove}>
+            <Trash2 size={16} />
+            Remove from {form.plantIds.length} plants
+          </button>
+        </div>
+      </section>
+
+      <section className="section" aria-labelledby="current-schedules-heading">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Current state</p>
+            <h2 id="current-schedules-heading">Selected Plant Schedules</h2>
+          </div>
+        </div>
+
+        <div className="detail-list">
+          {!isLoading && selectedPlants.length === 0 ? (
+            <p className="empty-state">Select one or more plants to review their current schedules.</p>
+          ) : null}
+
+          {selectedPlants.map((plant) => (
+            <article className="detail-row schedule-detail-row" key={plant.id}>
+              <div>
+                <h4>{plant.nickname}</h4>
+                <p>{plant.taxon} - {plant.location}</p>
+                {plant.careSchedules.length === 0 ? (
+                  <p>No schedules.</p>
+                ) : (
+                  <div className="schedule-chip-list">
+                    {plant.careSchedules.map((schedule) => (
+                      <span className={`status-pill ${schedule.status}`} key={schedule.id}>
+                        {schedule.action} / {formatRecurrence(schedule)} / {schedule.isEnabled ? schedule.nextCare : 'Disabled'}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </article>
+          ))}
         </div>
       </section>
     </>
   );
+}
+
+function formatPlantScheduleSummary(plant: Plant, selectedActivity?: CareActivity) {
+  if (!selectedActivity) {
+    return `${plant.careSchedules.length} schedules - next care ${plant.nextCare}`;
+  }
+
+  const schedule = plant.careSchedules.find((item) => item.careActivityId === selectedActivity.id);
+  if (!schedule) {
+    return `No ${selectedActivity.name} schedule`;
+  }
+
+  return `${selectedActivity.name}: ${formatRecurrence(schedule)} - ${schedule.isEnabled ? schedule.nextCare : 'disabled'}`;
+}
+
+function filterPlants(plants: Plant[], query: string) {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) {
+    return plants;
+  }
+
+  return plants.filter((plant) => [
+    plant.nickname,
+    plant.taxon,
+    plant.location,
+    plant.nextCare,
+    plant.status,
+    ...plant.careSchedules.map((schedule) => schedule.action),
+  ].some((value) => value.toLowerCase().includes(normalizedQuery)));
+}
+
+function formatSchedulePreview(activityName: string, form: BulkScheduleFormState) {
+  return `${activityName}: ${formatRecurrence({
+    recurrenceMode: form.recurrenceMode,
+    repeatEvery: Number(form.repeatEvery),
+    repeatUnit: form.repeatUnit,
+    repeatOnDays: form.repeatOnDays.length > 0 ? form.repeatOnDays.join(',') : null,
+    scheduledFor: form.scheduledFor || null,
+    endsMode: form.endsMode,
+    endsOn: form.endsMode === 'on' ? form.endsOn || null : null,
+    endsAfterOccurrences: form.endsMode === 'after' ? Number(form.endsAfterOccurrences) : null,
+  })}`;
+}
+
+function formatRecurrence(schedule: {
+  recurrenceMode: string;
+  repeatEvery: number;
+  repeatUnit: string;
+  repeatOnDays: string | null;
+  scheduledFor: string | null;
+  endsMode: string;
+  endsOn: string | null;
+  endsAfterOccurrences: number | null;
+}) {
+  const start = schedule.scheduledFor ? ` from ${formatCalendarDate(schedule.scheduledFor)}` : '';
+  const ending = schedule.endsMode === 'on' && schedule.endsOn
+    ? ` until ${formatCalendarDate(schedule.endsOn)}`
+    : schedule.endsMode === 'after' && schedule.endsAfterOccurrences
+      ? ` for ${schedule.endsAfterOccurrences}x`
+      : '';
+
+  if (schedule.recurrenceMode === 'none') {
+    return schedule.scheduledFor ? `does not repeat, ${formatCalendarDate(schedule.scheduledFor)}` : 'does not repeat';
+  }
+
+  if (schedule.recurrenceMode !== 'custom') {
+    return `${recurrenceOptions.find((option) => option.value === schedule.recurrenceMode)?.label.toLowerCase() ?? 'repeats'}${start}${ending}`;
+  }
+
+  const days = schedule.repeatOnDays
+    ? ` on ${schedule.repeatOnDays.split(',').join(' ')}`
+    : '';
+  return `every ${schedule.repeatEvery} ${schedule.repeatUnit}${schedule.repeatEvery === 1 ? '' : 's'}${days}${start}${ending}`;
+}
+
+function formatCalendarDate(date: string) {
+  const [year, month, day] = date.split('-');
+  if (!year || !month || !day) {
+    return date;
+  }
+
+  return `${month}/${day}/${year}`;
 }

@@ -166,6 +166,14 @@ namespace plant_manager.Data
                 entity.Property(e => e.Id)
                       .ValueGeneratedOnAdd();
                 entity.Property(e => e.EveryDays).IsRequired();
+                entity.Property(e => e.ScheduledFor);
+                entity.Property(e => e.RecurrenceMode).HasMaxLength(20).IsRequired();
+                entity.Property(e => e.RepeatEvery).IsRequired();
+                entity.Property(e => e.RepeatUnit).HasMaxLength(20).IsRequired();
+                entity.Property(e => e.RepeatOnDays).HasMaxLength(40);
+                entity.Property(e => e.EndsMode).HasMaxLength(20).IsRequired();
+                entity.Property(e => e.EndsOn);
+                entity.Property(e => e.EndsAfterOccurrences);
                 entity.Property(e => e.IsEnabled).IsRequired();
                 entity.HasIndex(e => new { e.PlantId, e.CareActionId }).IsUnique(false);
                 entity.HasIndex(e => new { e.PlantId, e.CareActivityId }).IsUnique();

@@ -19,12 +19,24 @@ export type PlantCareSchedule = {
   careActionId: number;
   action: string;
   everyDays: number;
+  scheduledFor: string | null;
+  recurrenceMode: ScheduleRecurrenceMode;
+  repeatEvery: number;
+  repeatUnit: ScheduleRepeatUnit;
+  repeatOnDays: string | null;
+  endsMode: ScheduleEndsMode;
+  endsOn: string | null;
+  endsAfterOccurrences: number | null;
   lastPerformedOn: string | null;
   lastPerformed: string;
   nextCare: string;
   status: CareStatus;
   isEnabled: boolean;
 };
+
+export type ScheduleRecurrenceMode = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
+export type ScheduleRepeatUnit = 'day' | 'week' | 'month' | 'year';
+export type ScheduleEndsMode = 'on' | 'after';
 
 export type PlantTaxon = {
   id: number;
@@ -112,6 +124,14 @@ export type PlantPayload = {
 export type PlantCareSchedulePayload = {
   careActivityId: number;
   everyDays: number;
+  scheduledFor: string | null;
+  recurrenceMode: ScheduleRecurrenceMode;
+  repeatEvery: number;
+  repeatUnit: ScheduleRepeatUnit;
+  repeatOnDays: string | null;
+  endsMode: ScheduleEndsMode;
+  endsOn: string | null;
+  endsAfterOccurrences: number | null;
   isEnabled: boolean;
 };
 
@@ -119,6 +139,14 @@ export type BulkPlantCareSchedulePayload = {
   plantIds: number[];
   careActivityId: number;
   everyDays: number;
+  scheduledFor: string | null;
+  recurrenceMode: ScheduleRecurrenceMode;
+  repeatEvery: number;
+  repeatUnit: ScheduleRepeatUnit;
+  repeatOnDays: string | null;
+  endsMode: ScheduleEndsMode;
+  endsOn: string | null;
+  endsAfterOccurrences: number | null;
   isEnabled: boolean;
 };
 

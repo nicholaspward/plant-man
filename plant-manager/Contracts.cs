@@ -17,12 +17,28 @@ namespace plant_manager
     public record SavePlantCareScheduleRequest(
         int CareActivityId,
         int? EveryDays,
+        DateOnly? ScheduledFor,
+        string? RecurrenceMode,
+        int? RepeatEvery,
+        string? RepeatUnit,
+        string? RepeatOnDays,
+        string? EndsMode,
+        DateOnly? EndsOn,
+        int? EndsAfterOccurrences,
         bool IsEnabled);
 
     public record BulkSavePlantCareScheduleRequest(
         IReadOnlyList<int> PlantIds,
         int CareActivityId,
         int? EveryDays,
+        DateOnly? ScheduledFor,
+        string? RecurrenceMode,
+        int? RepeatEvery,
+        string? RepeatUnit,
+        string? RepeatOnDays,
+        string? EndsMode,
+        DateOnly? EndsOn,
+        int? EndsAfterOccurrences,
         bool IsEnabled);
 
     public record SavePlantTaxonRequest(
@@ -242,7 +258,14 @@ namespace plant_manager
                 .ToList();
             var nextCare = schedules
                 .Where(schedule => schedule.IsEnabled)
-                .Select(schedule => PlantCareFormatter.GetNextCareDate(schedule.LastPerformedOn, schedule.EveryDays))
+                .Select(schedule =>
+                {
+                    var source = plant.CareSchedules.First(item => item.Id == schedule.Id);
+                    return PlantCareFormatter.GetNextCareDate(
+                        source,
+                        schedule.LastPerformedOn,
+                        plant.ActionLogs.Count(log => log.CareActivityId == source.CareActivityId));
+                })
                 .Where(date => date is not null)
                 .OrderBy(date => date)
                 .FirstOrDefault();
@@ -278,6 +301,14 @@ namespace plant_manager
         int CareActionId,
         string Action,
         int EveryDays,
+        DateOnly? ScheduledFor,
+        string RecurrenceMode,
+        int RepeatEvery,
+        string RepeatUnit,
+        string? RepeatOnDays,
+        string EndsMode,
+        DateOnly? EndsOn,
+        int? EndsAfterOccurrences,
         DateOnly? LastPerformedOn,
         string LastPerformed,
         string NextCare,
@@ -289,7 +320,7 @@ namespace plant_manager
             DateOnly? lastPerformedOn,
             DateOnly today)
         {
-            var nextCare = PlantCareFormatter.GetNextCareDate(lastPerformedOn, schedule.EveryDays);
+            var nextCare = PlantCareFormatter.GetNextCareDate(schedule, lastPerformedOn, GetCompletedOccurrences(schedule));
 
             return new PlantCareScheduleDto(
                 schedule.Id,
@@ -297,12 +328,23 @@ namespace plant_manager
                 schedule.CareActionId,
                 schedule.CareActivity.Name,
                 schedule.EveryDays,
+                schedule.ScheduledFor,
+                schedule.RecurrenceMode,
+                schedule.RepeatEvery,
+                schedule.RepeatUnit,
+                schedule.RepeatOnDays,
+                schedule.EndsMode,
+                schedule.EndsOn,
+                schedule.EndsAfterOccurrences,
                 lastPerformedOn,
                 PlantCareFormatter.FormatRelativeDate(lastPerformedOn, today, "Never"),
                 PlantCareFormatter.FormatRelativeDate(nextCare, today, "Unscheduled"),
                 PlantCareFormatter.GetStatus(nextCare, today),
                 schedule.IsEnabled);
         }
+
+        private static int GetCompletedOccurrences(PlantCareSchedule schedule) =>
+            schedule.Plant.ActionLogs.Count(log => log.CareActivityId == schedule.CareActivityId);
     }
 
     internal static class CareActivityExtensions
@@ -333,9 +375,10 @@ namespace plant_manager
         public static CareTaskDto FromSchedule(
             PlantCareSchedule schedule,
             DateOnly? lastPerformedOn,
+            int completedOccurrences,
             DateOnly today)
         {
-            var nextCare = PlantCareFormatter.GetNextCareDate(lastPerformedOn, schedule.EveryDays);
+            var nextCare = PlantCareFormatter.GetNextCareDate(schedule, lastPerformedOn, completedOccurrences);
 
             return new CareTaskDto(
                 schedule.Id,
@@ -427,8 +470,93 @@ namespace plant_manager
 
     internal static class PlantCareFormatter
     {
-        public static DateOnly? GetNextCareDate(DateOnly? lastPerformedOn, int everyDays) =>
-            lastPerformedOn?.AddDays(everyDays);
+        public static DateOnly? GetNextCareDate(
+            PlantCareSchedule schedule,
+            DateOnly? lastPerformedOn,
+            int completedOccurrences = 0)
+        {
+            if (schedule.EndsMode == "after" && schedule.EndsAfterOccurrences is not null && completedOccurrences >= schedule.EndsAfterOccurrences)
+            {
+                return null;
+            }
+
+            DateOnly? nextCare;
+            if (schedule.RecurrenceMode == "none")
+            {
+                nextCare = schedule.ScheduledFor is not null && (lastPerformedOn is null || schedule.ScheduledFor > lastPerformedOn)
+                    ? schedule.ScheduledFor
+                    : null;
+            }
+            else if (lastPerformedOn is null)
+            {
+                nextCare = schedule.ScheduledFor;
+            }
+            else
+            {
+                nextCare = AddInterval(lastPerformedOn.Value, schedule);
+            }
+
+            if (nextCare is not null && schedule.EndsMode == "on" && schedule.EndsOn is not null && nextCare > schedule.EndsOn)
+            {
+                return null;
+            }
+
+            return nextCare;
+        }
+
+        private static DateOnly AddInterval(DateOnly date, PlantCareSchedule schedule)
+        {
+            var repeatEvery = Math.Clamp(schedule.RepeatEvery, 1, 365);
+            var unit = schedule.RecurrenceMode == "custom" ? schedule.RepeatUnit : schedule.RecurrenceMode;
+
+            return unit switch
+            {
+                "day" or "daily" => date.AddDays(repeatEvery),
+                "week" when !string.IsNullOrWhiteSpace(schedule.RepeatOnDays) => GetNextSelectedWeekday(date, schedule.RepeatOnDays, repeatEvery),
+                "week" or "weekly" => date.AddDays(repeatEvery * 7),
+                "month" or "monthly" => date.AddMonths(repeatEvery),
+                "year" or "yearly" => date.AddYears(repeatEvery),
+                _ => date.AddDays(Math.Clamp(schedule.EveryDays, 1, 365))
+            };
+        }
+
+        private static DateOnly GetNextSelectedWeekday(DateOnly date, string repeatOnDays, int repeatEvery)
+        {
+            var selectedDays = repeatOnDays
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(ParseDayOfWeek)
+                .OfType<DayOfWeek>()
+                .ToHashSet();
+            if (selectedDays.Count == 0)
+            {
+                return date.AddDays(repeatEvery * 7);
+            }
+
+            var maxDays = Math.Max(7, repeatEvery * 7);
+            for (var offset = 1; offset <= maxDays; offset++)
+            {
+                var candidate = date.AddDays(offset);
+                if (selectedDays.Contains(candidate.DayOfWeek))
+                {
+                    return candidate;
+                }
+            }
+
+            return date.AddDays(repeatEvery * 7);
+        }
+
+        private static DayOfWeek? ParseDayOfWeek(string value) =>
+            value.ToUpperInvariant() switch
+            {
+                "SU" => DayOfWeek.Sunday,
+                "MO" => DayOfWeek.Monday,
+                "TU" => DayOfWeek.Tuesday,
+                "WE" => DayOfWeek.Wednesday,
+                "TH" => DayOfWeek.Thursday,
+                "FR" => DayOfWeek.Friday,
+                "SA" => DayOfWeek.Saturday,
+                _ => null
+            };
 
         public static string GetStatus(DateOnly? date, DateOnly today)
         {

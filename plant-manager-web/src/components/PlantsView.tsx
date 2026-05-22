@@ -10,7 +10,6 @@ type PlantsViewProps = {
   isPlantEditorOpen: boolean;
   isSaving: boolean;
   plants: Plant[];
-  visiblePlants: Plant[];
   onCancel: () => void;
   onDelete: (plant: Plant) => void;
   onEdit: (plant: Plant) => void;
@@ -27,7 +26,6 @@ export function PlantsView({
   isPlantEditorOpen,
   isSaving,
   plants,
-  visiblePlants,
   onCancel,
   onDelete,
   onEdit,
@@ -95,11 +93,7 @@ export function PlantsView({
             <p className="empty-state">No plants yet.</p>
           ) : null}
 
-          {!isLoading && plants.length > 0 && visiblePlants.length === 0 ? (
-            <p className="empty-state">No plants match the search.</p>
-          ) : null}
-
-          {visiblePlants.map((plant) => (
+          {plants.map((plant) => (
             <article className="plant-row" key={plant.id}>
               <div>
                 <h3>{plant.nickname}</h3>

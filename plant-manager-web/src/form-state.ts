@@ -13,6 +13,9 @@ import type {
   PlantFlagDefinitionPayload,
   PlantLocation,
   PlantLocationPayload,
+  ScheduleEndsMode,
+  ScheduleRecurrenceMode,
+  ScheduleRepeatUnit,
   PlantTaxon,
   PlantTaxonPayload,
 } from './domain';
@@ -83,6 +86,14 @@ export const emptyPlantFlagForm = {
 export const emptyBulkScheduleForm = {
   careActivityId: '',
   everyDays: '7',
+  scheduledFor: '',
+  recurrenceMode: 'weekly',
+  repeatEvery: '1',
+  repeatUnit: 'week',
+  repeatOnDays: [] as string[],
+  endsMode: 'after',
+  endsOn: '',
+  endsAfterOccurrences: '12',
   isEnabled: true,
   plantIds: [] as string[],
 };
@@ -248,6 +259,18 @@ export function toBulkSchedulePayload(form: BulkScheduleFormState): BulkPlantCar
     plantIds: form.plantIds.map((id) => Number(id)),
     careActivityId: Number(form.careActivityId),
     everyDays: Number(form.everyDays),
+    scheduledFor: form.scheduledFor || null,
+    recurrenceMode: form.recurrenceMode as ScheduleRecurrenceMode,
+    repeatEvery: Number(form.repeatEvery),
+    repeatUnit: form.repeatUnit as ScheduleRepeatUnit,
+    repeatOnDays: form.repeatOnDays.length > 0 ? form.repeatOnDays.join(',') : null,
+    endsMode: (form.recurrenceMode === 'none' ? 'after' : form.endsMode) as ScheduleEndsMode,
+    endsOn: form.endsMode === 'on' ? form.endsOn || null : null,
+    endsAfterOccurrences: form.recurrenceMode === 'none'
+      ? 1
+      : form.endsMode === 'after'
+        ? Number(form.endsAfterOccurrences)
+        : null,
     isEnabled: form.isEnabled,
   };
 }

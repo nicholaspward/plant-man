@@ -240,6 +240,13 @@ export async function savePlantCareSchedulesBulk(payload: BulkPlantCareScheduleP
   });
 }
 
+export async function removePlantCareSchedulesBulk(payload: BulkPlantCareSchedulePayload) {
+  return request<{ removed: number }>('/api/plant-care-schedules/bulk-remove', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function completeCareTasksBulk(payload: BulkCompleteCareTasksPayload) {
   return request<{ completed: number }>('/api/care-tasks/complete-bulk', {
     method: 'POST',

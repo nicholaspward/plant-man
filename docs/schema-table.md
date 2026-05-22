@@ -106,6 +106,14 @@ A per-plant recurring schedule for one care activity. Scheduler is the UI owner 
 | `care_action_id` | `int` | Yes | Snapshot/compatibility foreign key to the primary care action |
 | `care_activity_id` | `int` | Yes | Foreign key to `CareActivity` |
 | `every_days` | `int` | Yes | Recurrence interval |
+| `scheduled_for` | `date` | No | Optional specific next due date |
+| `recurrence_mode` | `string` | Yes | `none`, `daily`, `weekly`, `monthly`, `yearly`, or `custom` |
+| `repeat_every` | `int` | Yes | Custom repeat interval count |
+| `repeat_unit` | `string` | Yes | Custom repeat interval unit: `day`, `week`, `month`, or `year` |
+| `repeat_on_days` | `string` | No | Comma-separated weekday codes for weekly custom repeats |
+| `ends_mode` | `string` | Yes | `on` or `after` |
+| `ends_on` | `date` | No | End date when `ends_mode` is `on` |
+| `ends_after_occurrences` | `int` | No | Occurrence limit when `ends_mode` is `after` |
 | `is_enabled` | `bool` | Yes | Whether this schedule contributes to care tasks |
 
 ## `ActionLog`

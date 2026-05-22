@@ -7,9 +7,7 @@ type HomeViewProps = {
   dueCount: number;
   error: string | null;
   isLoading: boolean;
-  isPlantSearchActive: boolean;
   plants: Plant[];
-  totalPlantCount: number;
   onCompleteBulkTasks: (tasks: CareTask[]) => void;
   onCompleteTask: (task: CareTask) => void;
   onNewPlant: () => void;
@@ -21,9 +19,7 @@ export function HomeView({
   dueCount,
   error,
   isLoading,
-  isPlantSearchActive,
   plants,
-  totalPlantCount,
   onCompleteBulkTasks,
   onCompleteTask,
   onNewPlant,
@@ -51,48 +47,56 @@ export function HomeView({
 
         <div className="task-list">
           {!isLoading && careTasks.length === 0 ? (
-            <p className="empty-state">
-              {isPlantSearchActive ? 'No care tasks match the search.' : 'No care tasks yet.'}
-            </p>
+            <p className="empty-state">No care tasks yet.</p>
           ) : null}
 
-          {dueTaskGroups.map((group) => (
-            <article className="task-row task-row-group" key={group.careActivityId}>
-              <span className="status-dot due" />
-              <div>
-                <h3>{group.action}</h3>
-                <p>
-                  {group.tasks.length} due - {formatPlantNames(group.tasks)}
-                </p>
-              </div>
-              <button
-                className="small-action"
-                type="button"
-                onClick={() => onCompleteBulkTasks(group.tasks)}
-              >
-                <CalendarCheck size={16} />
-                Log all due
-              </button>
-            </article>
-          ))}
+          {dueTaskGroups.length > 0 ? (
+            <>
+              <p className="task-list-label">Bulk actions</p>
+              {dueTaskGroups.map((group) => (
+                <article className="task-row task-row-group" key={group.careActivityId}>
+                  <span className="status-dot due" />
+                  <div>
+                    <h3>{group.action}</h3>
+                    <p>
+                      {group.tasks.length} due - {formatPlantNames(group.tasks)}
+                    </p>
+                  </div>
+                  <button
+                    className="small-action"
+                    type="button"
+                    onClick={() => onCompleteBulkTasks(group.tasks)}
+                  >
+                    <CalendarCheck size={16} />
+                    Log all due
+                  </button>
+                </article>
+              ))}
+            </>
+          ) : null}
 
-          {careTasks.map((task) => (
-            <article className="task-row" key={task.id}>
-              <span className={`status-dot ${task.status}`} />
-              <div>
-                <h3>{task.action}</h3>
-                <p>{task.plantName} - {task.due}</p>
-              </div>
-              <button
-                className="small-action"
-                type="button"
-                onClick={() => onCompleteTask(task)}
-              >
-                <CalendarCheck size={16} />
-                Log
-              </button>
-            </article>
-          ))}
+          {careTasks.length > 0 ? (
+            <>
+              <p className="task-list-label">Individual tasks</p>
+              {careTasks.map((task) => (
+                <article className="task-row" key={task.id}>
+                  <span className={`status-dot ${task.status}`} />
+                  <div>
+                    <h3>{task.action}</h3>
+                    <p>{task.plantName} - {task.due}</p>
+                  </div>
+                  <button
+                    className="small-action"
+                    type="button"
+                    onClick={() => onCompleteTask(task)}
+                  >
+                    <CalendarCheck size={16} />
+                    Log
+                  </button>
+                </article>
+              ))}
+            </>
+          ) : null}
         </div>
       </section>
 
@@ -105,12 +109,8 @@ export function HomeView({
         </div>
 
         <div className="plant-grid">
-          {!isLoading && totalPlantCount === 0 ? (
+          {!isLoading && plants.length === 0 ? (
             <p className="empty-state">No plants yet.</p>
-          ) : null}
-
-          {!isLoading && totalPlantCount > 0 && plants.length === 0 ? (
-            <p className="empty-state">No plants match the search.</p>
           ) : null}
 
           {plants.map((plant) => (

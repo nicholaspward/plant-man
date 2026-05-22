@@ -51,6 +51,8 @@ export function PlantManagementView({
   const enabledFlags = plantFlagDefinitions.filter((flag) => flag.isEnabled);
   const enabledLocations = plantLocations.filter((location) =>
     location.isEnabled || location.id === selectedPlant?.locationId);
+  const selectedTaxon = plantTaxa.find((taxon) => taxon.id === selectedPlant?.taxonId);
+  const selectedLocation = plantLocations.find((location) => location.id === selectedPlant?.locationId);
   const activeFlags = selectedPlant?.flags.filter((flag) => flag.resolvedOn === null) ?? [];
   const resolvedFlags = selectedPlant?.flags.filter((flag) => flag.resolvedOn !== null) ?? [];
 
@@ -62,7 +64,7 @@ export function PlantManagementView({
           <h2 id="plant-management-summary-heading">
             {isLoading ? 'Loading plants' : 'Plant Management'}
           </h2>
-          <p>{error ?? 'Attach building blocks to plant objects without changing the building block libraries.'}</p>
+          <p>{error ?? 'Attach catalog records to plant objects without changing the catalogs.'}</p>
         </div>
       </section>
 
@@ -94,10 +96,10 @@ export function PlantManagementView({
 
       {selectedPlant ? (
         <div className="plant-detail-grid">
-          <section className="detail-section" aria-labelledby="plant-management-identity">
+          <section className="detail-section" aria-labelledby="plant-management-taxa">
             <div className="detail-section-heading">
               <Tags size={17} />
-              <h3 id="plant-management-identity">Identity</h3>
+              <h3 id="plant-management-taxa">Plant Taxa</h3>
             </div>
             <div className="plant-form">
               <label>
@@ -116,12 +118,26 @@ export function PlantManagementView({
                 </select>
               </label>
             </div>
+            {selectedTaxon ? (
+              <div className="plant-detail-meta compact-meta">
+                <div>
+                  <span>Common name</span>
+                  <strong>{selectedTaxon.name}</strong>
+                </div>
+                <div>
+                  <span>Botanical name</span>
+                  <strong>{formatTaxon(selectedTaxon)}</strong>
+                </div>
+              </div>
+            ) : (
+              <p className="empty-state">No taxon assigned.</p>
+            )}
           </section>
 
           <section className="detail-section" aria-labelledby="plant-management-placement">
             <div className="detail-section-heading">
               <MapPin size={17} />
-              <h3 id="plant-management-placement">Placement</h3>
+              <h3 id="plant-management-placement">Location</h3>
             </div>
             <div className="plant-form">
               <label>
@@ -140,12 +156,42 @@ export function PlantManagementView({
                 </select>
               </label>
             </div>
+            {selectedLocation ? (
+              <div className="plant-detail-meta compact-meta">
+                <div>
+                  <span>Location</span>
+                  <strong>{selectedLocation.name}</strong>
+                </div>
+                <div>
+                  <span>Status</span>
+                  <strong>{selectedLocation.isEnabled ? 'Enabled' : 'Disabled'}</strong>
+                </div>
+                {selectedLocation.notes ? (
+                  <div className="meta-wide">
+                    <span>Notes</span>
+                    <strong>{selectedLocation.notes}</strong>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <p className="empty-state">No location assigned.</p>
+            )}
           </section>
 
           <section className="detail-section detail-section-wide" aria-labelledby="plant-management-flags">
             <div className="detail-section-heading">
               <Check size={17} />
               <h3 id="plant-management-flags">Flags</h3>
+            </div>
+            <div className="plant-detail-meta compact-meta">
+              <div>
+                <span>Active</span>
+                <strong>{activeFlags.length}</strong>
+              </div>
+              <div>
+                <span>Resolved</span>
+                <strong>{resolvedFlags.length}</strong>
+              </div>
             </div>
 
             <div className="flag-assignment-form">
@@ -192,47 +238,53 @@ export function PlantManagementView({
             {activeFlags.length === 0 ? (
               <p className="empty-state">No active flags.</p>
             ) : (
-              <div className="detail-list">
-                {activeFlags.map((flag) => (
-                  <div className="detail-row" key={flag.id}>
-                    <div>
-                      <h4>
-                        <span className="flag-chip" style={{ backgroundColor: flag.color }}>
-                          {flag.name}
-                        </span>
-                      </h4>
-                      <p>
-                        Started {formatDate(flag.startedOn)}
-                        {flag.notes ? ` - ${flag.notes}` : ''}
-                      </p>
+              <>
+                <p className="list-label">Active flags</p>
+                <div className="detail-list">
+                  {activeFlags.map((flag) => (
+                    <div className="detail-row" key={flag.id}>
+                      <div>
+                        <h4>
+                          <span className="flag-chip" style={{ backgroundColor: flag.color }}>
+                            {flag.name}
+                          </span>
+                        </h4>
+                        <p>
+                          Started {formatDate(flag.startedOn)}
+                          {flag.notes ? ` - ${flag.notes}` : ''}
+                        </p>
+                      </div>
+                      <div className="row-actions">
+                        <button className="small-action" type="button" disabled={isSaving} onClick={() => onResolveFlag(flag)}>
+                          Resolve
+                        </button>
+                        <button className="icon-button compact danger" type="button" aria-label={`Remove ${flag.name}`} disabled={isSaving} onClick={() => onRemoveFlag(flag)}>
+                          <Trash2 size={17} />
+                        </button>
+                      </div>
                     </div>
-                    <div className="row-actions">
-                      <button className="small-action" type="button" disabled={isSaving} onClick={() => onResolveFlag(flag)}>
-                        Resolve
-                      </button>
-                      <button className="icon-button compact danger" type="button" aria-label={`Remove ${flag.name}`} disabled={isSaving} onClick={() => onRemoveFlag(flag)}>
-                        <Trash2 size={17} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </>
             )}
 
             {resolvedFlags.length > 0 ? (
-              <div className="detail-list resolved-flags">
-                {resolvedFlags.slice(0, 4).map((flag) => (
-                  <div className="detail-row" key={flag.id}>
-                    <div>
-                      <h4>{flag.name}</h4>
-                      <p>
-                        Resolved {flag.resolvedOn ? formatDate(flag.resolvedOn) : ''}
-                        {flag.notes ? ` - ${flag.notes}` : ''}
-                      </p>
+              <>
+                <p className="list-label">Recently resolved</p>
+                <div className="detail-list resolved-flags">
+                  {resolvedFlags.slice(0, 4).map((flag) => (
+                    <div className="detail-row" key={flag.id}>
+                      <div>
+                        <h4>{flag.name}</h4>
+                        <p>
+                          Resolved {flag.resolvedOn ? formatDate(flag.resolvedOn) : ''}
+                          {flag.notes ? ` - ${flag.notes}` : ''}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </>
             ) : null}
           </section>
         </div>

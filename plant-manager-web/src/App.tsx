@@ -1,4 +1,3 @@
-import { Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   createActionResource,
@@ -26,6 +25,7 @@ import {
   getPlantLocations,
   getPlantTaxa,
   removePlantFlagAssignment,
+  removePlantCareSchedulesBulk,
   resolvePlantFlag,
   savePlantCareSchedulesBulk,
   updateActionResource,
@@ -127,7 +127,6 @@ export function App() {
   const [flagDefinitionForm, setFlagDefinitionForm] = useState<FlagDefinitionFormState>(emptyFlagDefinitionForm);
   const [plantFlagForm, setPlantFlagForm] = useState<PlantFlagFormState>(emptyPlantFlagForm);
   const [bulkScheduleForm, setBulkScheduleForm] = useState<BulkScheduleFormState>(emptyBulkScheduleForm);
-  const [plantSearch, setPlantSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   async function loadDashboard() {
@@ -177,22 +176,6 @@ export function App() {
   const dueCount = useMemo(
     () => careTasks.filter((task) => task.status === 'due').length,
     [careTasks],
-  );
-  const filteredPlants = useMemo(
-    () => filterPlants(plants, plantSearch),
-    [plants, plantSearch],
-  );
-  const filteredPlantIds = useMemo(
-    () => new Set(filteredPlants.map((plant) => plant.id)),
-    [filteredPlants],
-  );
-  const filteredCareTasks = useMemo(
-    () => filterCareTasks(careTasks, filteredPlantIds, plantSearch),
-    [careTasks, filteredPlantIds, plantSearch],
-  );
-  const visibleDueCount = useMemo(
-    () => filteredCareTasks.filter((task) => task.status === 'due').length,
-    [filteredCareTasks],
   );
 
   const activePlant = plants.find((plant) => plant.id === editingPlantId);
@@ -758,6 +741,24 @@ export function App() {
     }
   }
 
+  async function removeBulkSchedule() {
+    if (!bulkScheduleForm.careActivityId || bulkScheduleForm.plantIds.length === 0) {
+      setError('Select an activity and at least one plant.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await removePlantCareSchedulesBulk(toBulkSchedulePayload(bulkScheduleForm));
+      setBulkScheduleForm(emptyBulkScheduleForm);
+      await loadDashboard();
+    } catch {
+      setError('Could not remove the care schedule.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function removeFlagDefinition(flag: PlantFlagDefinition) {
     const confirmed = window.confirm(`Delete ${flag.name}? Flags assigned to plants will be disabled instead.`);
     if (!confirmed) {
@@ -835,11 +836,6 @@ export function App() {
   }
 
   async function completeTask(task: CareTask) {
-    const plant = plants.find((item) => item.id === task.plantId);
-    if (plant && !plantMatchesSearch(plant, plantSearch)) {
-      setPlantSearch('');
-    }
-
     setIsSaving(true);
     try {
       await completeCareTasksBulk({
@@ -893,16 +889,6 @@ export function App() {
           <span className="catalog-logo">Plant-Man</span>
           <span className="catalog-subtitle">Plant Care Supply</span>
         </div>
-        <label className="search-field">
-          <Search size={20} />
-          <span className="sr-only">Search plants</span>
-          <input
-            value={plantSearch}
-            type="search"
-            placeholder="Search plants"
-            onChange={(event) => setPlantSearch(event.target.value)}
-          />
-        </label>
         <div className="catalog-contact">
           <strong>{plants.length}</strong>
           <span>plants tracked</span>
@@ -964,7 +950,7 @@ export function App() {
             </div>
 
             <div className="nav-group">
-              <h3>Building Blocks</h3>
+              <h3>Catalogs</h3>
               <button
                 type="button"
                 aria-current={view === 'taxa' ? 'page' : undefined}
@@ -1023,7 +1009,6 @@ export function App() {
                 isPlantEditorOpen={isPlantEditorOpen}
                 isSaving={isSaving}
                 plants={plants}
-                visiblePlants={filteredPlants}
                 onCancel={cancelEditing}
                 onDelete={(plant) => void removePlant(plant)}
                 onEdit={startEditingPlant}
@@ -1040,7 +1025,7 @@ export function App() {
                 plantFlagForm={plantFlagForm}
                 plantLocations={plantLocations}
                 plantTaxa={plantTaxa}
-                plants={filteredPlants}
+                plants={plants}
                 selectedPlant={selectedPlant}
                 selectedPlantId={selectedPlantId}
                 onAssignFlag={() => void assignFlagToSelectedPlant()}
@@ -1058,8 +1043,9 @@ export function App() {
                 form={bulkScheduleForm}
                 isLoading={isLoading}
                 isSaving={isSaving}
-                plants={filteredPlants}
+                plants={plants}
                 onFieldChange={updateBulkScheduleForm}
+                onRemove={() => void removeBulkSchedule()}
                 onSave={() => void saveBulkSchedule()}
               />
             ) : view === 'taxa' ? (
@@ -1180,13 +1166,11 @@ export function App() {
               />
             ) : (
               <HomeView
-                careTasks={filteredCareTasks}
-                dueCount={plantSearch.trim() ? visibleDueCount : dueCount}
+                careTasks={careTasks}
+                dueCount={dueCount}
                 error={error}
                 isLoading={isLoading}
-                isPlantSearchActive={Boolean(plantSearch.trim())}
-                plants={filteredPlants}
-                totalPlantCount={plants.length}
+                plants={plants}
                 onCompleteBulkTasks={(tasks) => void completeBulkTasks(tasks)}
                 onCompleteTask={(task) => void completeTask(task)}
                 onNewPlant={startAddingPlant}
@@ -1213,7 +1197,7 @@ function getViewEyebrow(view: View) {
     case 'locations':
     case 'resources':
     case 'flags':
-      return 'Building Blocks';
+      return 'Catalogs';
     case 'actions':
     case 'activities':
       return 'Care';
@@ -1245,46 +1229,6 @@ function getViewTitle(view: View) {
     default:
       return 'Plant-Man';
   }
-}
-
-function filterPlants(plants: Plant[], search: string) {
-  const normalizedSearch = search.trim().toLowerCase();
-  if (!normalizedSearch) {
-    return plants;
-  }
-
-  return plants.filter((plant) => plantMatchesSearch(plant, normalizedSearch));
-}
-
-function filterCareTasks(tasks: CareTask[], visiblePlantIds: Set<number>, search: string) {
-  const normalizedSearch = search.trim().toLowerCase();
-  if (!normalizedSearch) {
-    return tasks;
-  }
-
-  return tasks.filter((task) => (
-    visiblePlantIds.has(task.plantId)
-    || task.action.toLowerCase().includes(normalizedSearch)
-    || task.plantName.toLowerCase().includes(normalizedSearch)
-    || task.status.toLowerCase().includes(normalizedSearch)
-  ));
-}
-
-function plantMatchesSearch(plant: Plant, search: string) {
-  const normalizedSearch = search.trim().toLowerCase();
-  if (!normalizedSearch) {
-    return true;
-  }
-
-  return [
-    plant.nickname,
-    plant.taxon,
-    plant.location,
-    plant.status,
-    plant.nextCare,
-    ...plant.flags.map((flag) => flag.name),
-    ...plant.careSchedules.map((schedule) => schedule.action),
-  ].some((value) => value.toLowerCase().includes(normalizedSearch));
 }
 
 function getTodayInputDate() {

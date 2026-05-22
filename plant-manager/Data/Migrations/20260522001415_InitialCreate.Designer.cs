@@ -11,7 +11,7 @@ using plant_manager.Data;
 namespace plant_manager.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260520180017_InitialCreate")]
+    [Migration("20260522001415_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -252,6 +252,17 @@ namespace plant_manager.Data.Migrations
                     b.Property<int>("CareActivityId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("EndsAfterOccurrences")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("EndsMode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("EndsOn")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("EveryDays")
                         .HasColumnType("INTEGER");
 
@@ -260,6 +271,26 @@ namespace plant_manager.Data.Migrations
 
                     b.Property<int>("PlantId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("RecurrenceMode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RepeatEvery")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RepeatOnDays")
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RepeatUnit")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("ScheduledFor")
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
