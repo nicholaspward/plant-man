@@ -43,9 +43,9 @@ namespace plant_manager.Endpoints
                 }
 
                 var primaryAction = activity.PrimaryAction();
-                if (!activity.IsEnabled || primaryAction is null || activity.Actions.Any(action => !action.CareAction.IsEnabled))
+                if (primaryAction is null)
                 {
-                    return Results.BadRequest(new { error = "Disabled activities cannot be logged." });
+                    return Results.BadRequest(new { error = "Care activity has no configured actions." });
                 }
 
                 var performedOn = request.PerformedOn ?? DateOnly.FromDateTime(DateTime.UtcNow);
@@ -107,9 +107,9 @@ namespace plant_manager.Endpoints
                 }
 
                 var primaryAction = activity.PrimaryAction();
-                if (!activity.IsEnabled || primaryAction is null || activity.Actions.Any(action => !action.CareAction.IsEnabled))
+                if (primaryAction is null)
                 {
-                    return Results.BadRequest(new { error = "Disabled activities cannot be logged." });
+                    return Results.BadRequest(new { error = "Care activity has no configured actions." });
                 }
 
                 var (resources, resourceError) = await BuildLogResources(request.Resources, activity, db);
@@ -186,11 +186,6 @@ namespace plant_manager.Endpoints
             if (resourcesById.Count != resourceIds.Count)
             {
                 return ([], "One or more resources were not found.");
-            }
-
-            if (resourcesById.Values.Any(resource => !resource.IsEnabled))
-            {
-                return ([], "Disabled resources cannot be logged.");
             }
 
             return (requestedResources

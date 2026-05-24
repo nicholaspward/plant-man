@@ -6,7 +6,6 @@ namespace plant_manager.Data.Models
 
         public string Name { get; set; } = string.Empty;
         public string? Notes { get; set; }
-        public bool IsEnabled { get; set; } = true;
 
         public List<Plant> Plants { get; set; } = [];
     }

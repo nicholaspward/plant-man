@@ -15,7 +15,7 @@ type FlagsViewProps = {
   onCloseDetail: () => void;
   onDelete: (flag: PlantFlagDefinition) => void;
   onEdit: (flag: PlantFlagDefinition) => void;
-  onFieldChange: (field: keyof FlagDefinitionFormState, value: string | boolean) => void;
+  onFieldChange: (field: keyof FlagDefinitionFormState, value: string) => void;
   onNew: () => void;
   onOpenDetail: (flag: PlantFlagDefinition) => void;
   onSave: () => void;
@@ -39,15 +39,13 @@ export function FlagsView({
   onOpenDetail,
   onSave,
 }: FlagsViewProps) {
-  const enabledCount = flags.filter((flag) => flag.isEnabled).length;
-
   return (
     <>
       <section className="summary-panel" aria-labelledby="flags-summary-heading">
         <div>
           <p className="eyebrow">Plant flags</p>
           <h2 id="flags-summary-heading">
-            {isLoading ? 'Loading flags' : `${enabledCount} flags enabled`}
+            {isLoading ? 'Loading flags' : `${flags.length} flags`}
           </h2>
           <p>{error ?? 'Configure reusable flags for plants.'}</p>
         </div>
@@ -82,10 +80,6 @@ export function FlagsView({
                 </span>
               </strong>
             </div>
-            <div>
-              <span>Status</span>
-              <strong>{selectedFlag.isEnabled ? 'Enabled' : 'Disabled'}</strong>
-            </div>
           </div>
         </section>
       ) : null}
@@ -118,14 +112,6 @@ export function FlagsView({
                 onChange={(event) => onFieldChange('color', event.target.value)}
               />
             </label>
-            <label className="toggle-field">
-              <input
-                checked={form.isEnabled}
-                type="checkbox"
-                onChange={(event) => onFieldChange('isEnabled', event.target.checked)}
-              />
-              Enabled
-            </label>
           </div>
 
           <div className="form-actions">
@@ -154,7 +140,6 @@ export function FlagsView({
             <article className="plant-row" key={flag.id}>
               <div>
                 <h3>{flag.name}</h3>
-                <p>{flag.isEnabled ? 'Enabled' : 'Disabled'}</p>
               </div>
               <div className="row-actions">
                 <span className="flag-chip" style={{ backgroundColor: flag.color }}>

@@ -15,7 +15,7 @@ type LocationsViewProps = {
   onCloseDetail: () => void;
   onDelete: (location: PlantLocation) => void;
   onEdit: (location: PlantLocation) => void;
-  onFieldChange: (field: keyof LocationFormState, value: string | boolean) => void;
+  onFieldChange: (field: keyof LocationFormState, value: string) => void;
   onNew: () => void;
   onOpenDetail: (location: PlantLocation) => void;
   onSave: () => void;
@@ -39,15 +39,13 @@ export function LocationsView({
   onOpenDetail,
   onSave,
 }: LocationsViewProps) {
-  const enabledCount = locations.filter((location) => location.isEnabled).length;
-
   return (
     <>
       <section className="summary-panel" aria-labelledby="locations-summary-heading">
         <div>
           <p className="eyebrow">Location library</p>
           <h2 id="locations-summary-heading">
-            {isLoading ? 'Loading locations' : `${enabledCount} locations enabled`}
+            {isLoading ? 'Loading locations' : `${locations.length} locations`}
           </h2>
           <p>{error ?? 'Create and maintain the places where plants live.'}</p>
         </div>
@@ -77,10 +75,6 @@ export function LocationsView({
             <div>
               <span>Notes</span>
               <strong>{selectedLocation.notes ?? 'No notes'}</strong>
-            </div>
-            <div>
-              <span>Status</span>
-              <strong>{selectedLocation.isEnabled ? 'Enabled' : 'Disabled'}</strong>
             </div>
           </div>
         </section>
@@ -113,14 +107,6 @@ export function LocationsView({
               onChange={(event) => onFieldChange('notes', event.target.value)}
             />
           </label>
-          <label className="toggle-field">
-            <input
-              checked={form.isEnabled}
-              type="checkbox"
-              onChange={(event) => onFieldChange('isEnabled', event.target.checked)}
-            />
-            Enabled
-          </label>
         </div>
 
         <div className="form-actions">
@@ -151,8 +137,6 @@ export function LocationsView({
                 <h3>{location.name}</h3>
                 <p>
                   {location.notes ?? 'No notes'}
-                  {' - '}
-                  {location.isEnabled ? 'Enabled' : 'Disabled'}
                 </p>
               </div>
               <div className="row-actions">

@@ -16,14 +16,14 @@ namespace plant_manager.Data
 
         private static readonly ActionResource[] StarterResources =
         [
-            new() { Name = "Water", Category = "Consumable", Notes = "Plain watering resource." },
-            new() { Name = "Potting Mix", Category = "Medium", Notes = "General purpose houseplant medium." },
-            new() { Name = "Orchid Bark", Category = "Medium", Notes = "Chunky amendment for airflow and drainage." },
-            new() { Name = "Perlite", Category = "Medium", Notes = "Lightweight amendment for drainage and aeration." },
-            new() { Name = "Fertilizer", Category = "Fertilizer", Notes = "General plant nutrient." },
-            new() { Name = "Nursery Pot", Category = "Container", Notes = "Basic plastic grow pot." },
-            new() { Name = "Neem Oil", Category = "Treatment", Notes = "Common pest treatment." },
-            new() { Name = "Pruners", Category = "Equipment", Notes = "Cutting tool for pruning or cleanup." }
+            new() { Name = "Water", Notes = "Plain watering resource." },
+            new() { Name = "Potting Mix", Notes = "General purpose houseplant medium." },
+            new() { Name = "Orchid Bark", Notes = "Chunky amendment for airflow and drainage." },
+            new() { Name = "Perlite", Notes = "Lightweight amendment for drainage and aeration." },
+            new() { Name = "Fertilizer", Notes = "General plant nutrient." },
+            new() { Name = "Nursery Pot", Notes = "Basic plastic grow pot." },
+            new() { Name = "Neem Oil", Notes = "Common pest treatment." },
+            new() { Name = "Pruners", Notes = "Cutting tool for pruning or cleanup." }
         ];
 
         private static readonly StarterCareActivity[] StarterCareActivities =
@@ -117,8 +117,7 @@ namespace plant_manager.Data
                 .Select(starterAction => new CareAction
                 {
                     Name = starterAction.Name,
-                    Description = starterAction.Description,
-                    IsEnabled = starterAction.IsEnabled
+                    Description = starterAction.Description
                 })
                 .ToList();
 
@@ -143,9 +142,7 @@ namespace plant_manager.Data
                 .Select(starterResource => new ActionResource
                 {
                     Name = starterResource.Name,
-                    Category = starterResource.Category,
-                    Notes = starterResource.Notes,
-                    IsEnabled = starterResource.IsEnabled
+                    Notes = starterResource.Notes
                 })
                 .ToList();
 
@@ -201,7 +198,6 @@ namespace plant_manager.Data
                     return new CareActivity
                     {
                         Name = starterActivity.Name,
-                        IsEnabled = true,
                         Actions = actions
                     };
                 })
@@ -229,8 +225,7 @@ namespace plant_manager.Data
                 .Select(starterFlag => new PlantFlagDefinition
                 {
                     Name = starterFlag.Name,
-                    Color = starterFlag.Color,
-                    IsEnabled = starterFlag.IsEnabled
+                    Color = starterFlag.Color
                 })
                 .ToList();
 
@@ -347,8 +342,7 @@ namespace plant_manager.Data
                     string.Equals(existingName, starterLocation, StringComparison.OrdinalIgnoreCase)))
                 .Select(starterLocation => new PlantLocation
                 {
-                    Name = starterLocation,
-                    IsEnabled = true
+                    Name = starterLocation
                 })
                 .ToList();
 

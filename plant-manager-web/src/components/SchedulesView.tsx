@@ -10,7 +10,7 @@ type SchedulesViewProps = {
   isLoading: boolean;
   isSaving: boolean;
   plants: Plant[];
-  onFieldChange: (field: keyof BulkScheduleFormState, value: string | boolean | string[]) => void;
+  onFieldChange: (field: keyof BulkScheduleFormState, value: string | string[]) => void;
   onRemove: () => void;
   onSave: () => void;
 };
@@ -46,7 +46,6 @@ export function SchedulesView({
   onSave,
 }: SchedulesViewProps) {
   const [plantQuery, setPlantQuery] = useState('');
-  const enabledActivities = activities.filter((activity) => activity.isEnabled);
   const visiblePlants = useMemo(
     () => filterPlants(plants, plantQuery),
     [plants, plantQuery],
@@ -93,7 +92,7 @@ export function SchedulesView({
               onChange={(event) => onFieldChange('careActivityId', event.target.value)}
             >
               <option value="">Select an activity</option>
-              {enabledActivities.map((activity) => (
+              {activities.map((activity) => (
                 <option key={activity.id} value={activity.id}>
                   {activity.name}
                 </option>
@@ -108,15 +107,6 @@ export function SchedulesView({
               value={form.scheduledFor}
               onChange={(event) => onFieldChange('scheduledFor', event.target.value)}
             />
-          </label>
-          <label className="toggle-field">
-            <input
-              checked={form.isEnabled}
-              disabled={isSaving}
-              type="checkbox"
-              onChange={(event) => onFieldChange('isEnabled', event.target.checked)}
-            />
-            Enabled
           </label>
         </div>
 
@@ -348,7 +338,7 @@ export function SchedulesView({
                   <div className="schedule-chip-list">
                     {plant.careSchedules.map((schedule) => (
                       <span className={`status-pill ${schedule.status}`} key={schedule.id}>
-                        {schedule.action} / {formatRecurrence(schedule)} / {schedule.isEnabled ? schedule.nextCare : 'Disabled'}
+                        {schedule.action} / {formatRecurrence(schedule)} / {schedule.nextCare}
                       </span>
                     ))}
                   </div>
@@ -372,7 +362,7 @@ function formatPlantScheduleSummary(plant: Plant, selectedActivity?: CareActivit
     return `No ${selectedActivity.name} schedule`;
   }
 
-  return `${selectedActivity.name}: ${formatRecurrence(schedule)} - ${schedule.isEnabled ? schedule.nextCare : 'disabled'}`;
+  return `${selectedActivity.name}: ${formatRecurrence(schedule)} - ${schedule.nextCare}`;
 }
 
 function filterPlants(plants: Plant[], query: string) {

@@ -11,9 +11,7 @@ namespace plant_manager.Endpoints
             app.MapGet("/api/action-resources", async (ApplicationDbContext db) =>
             {
                 var resources = await db.ActionResources
-                    .OrderByDescending(resource => resource.IsEnabled)
-                    .ThenBy(resource => resource.Category)
-                    .ThenBy(resource => resource.Name)
+                    .OrderBy(resource => resource.Name)
                     .Select(resource => ActionResourceDto.FromActionResource(resource))
                     .ToListAsync();
 
@@ -37,9 +35,7 @@ namespace plant_manager.Endpoints
                 var resource = new ActionResource
                 {
                     Name = name,
-                    Category = string.IsNullOrWhiteSpace(request.Category) ? null : request.Category.Trim(),
-                    Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
-                    IsEnabled = request.IsEnabled
+                    Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
                 };
 
                 db.ActionResources.Add(resource);
@@ -70,9 +66,7 @@ namespace plant_manager.Endpoints
                 }
 
                 resource.Name = name;
-                resource.Category = string.IsNullOrWhiteSpace(request.Category) ? null : request.Category.Trim();
                 resource.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
-                resource.IsEnabled = request.IsEnabled;
 
                 await db.SaveChangesAsync();
 
@@ -91,9 +85,7 @@ namespace plant_manager.Endpoints
                     || await db.CareActivityActionResources.AnyAsync(activityResource => activityResource.ActionResourceId == id);
                 if (isInUse)
                 {
-                    resource.IsEnabled = false;
-                    await db.SaveChangesAsync();
-                    return Results.Conflict(new { error = "Resource is in use, so it was disabled instead of deleted." });
+                    return Results.Conflict(new { error = "Resource is in use." });
                 }
 
                 db.ActionResources.Remove(resource);

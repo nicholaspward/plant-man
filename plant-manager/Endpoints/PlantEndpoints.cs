@@ -206,8 +206,7 @@ namespace plant_manager.Endpoints
                         null,
                         "after",
                         null,
-                        12,
-                        true)
+                        12)
                 ];
             }
 
@@ -234,11 +233,9 @@ namespace plant_manager.Endpoints
             }
 
             if (activitiesById.Values.Any(activity =>
-                !activity.IsEnabled
-                || activity.PrimaryAction() is null
-                || activity.Actions.Any(action => !action.CareAction.IsEnabled)))
+                activity.PrimaryAction() is null))
             {
-                return "Disabled activities cannot be scheduled.";
+                return "Care activities must have at least one action.";
             }
 
             var requestedActivityIds = activityIds.ToHashSet();
@@ -280,7 +277,6 @@ namespace plant_manager.Endpoints
                     requestedSchedule.EndsAfterOccurrences,
                     requestedSchedule.ScheduledFor,
                     requestedSchedule.EveryDays));
-                schedule.IsEnabled = requestedSchedule.IsEnabled;
             }
 
             return null;

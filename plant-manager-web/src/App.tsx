@@ -167,6 +167,76 @@ export function App() {
     }
   }
 
+  async function loadLocations() {
+    const locationsResponse = await getPlantLocations();
+
+    setError(null);
+    setPlantLocations(locationsResponse);
+  }
+
+  async function loadPlants() {
+    const plantsResponse = await getPlants();
+
+    setError(null);
+    setPlants(plantsResponse);
+  }
+
+  async function loadPlantsAndCareTasks() {
+    const [plantsResponse, tasksResponse] = await Promise.all([
+      getPlants(),
+      getCareTasks(),
+    ]);
+
+    setError(null);
+    setPlants(plantsResponse);
+    setCareTasks(tasksResponse);
+  }
+
+  async function loadTaxaAndPlants() {
+    const [plantsResponse, taxaResponse] = await Promise.all([
+      getPlants(),
+      getPlantTaxa(),
+    ]);
+
+    setError(null);
+    setPlants(plantsResponse);
+    setPlantTaxa(taxaResponse);
+  }
+
+  async function loadFlagsAndPlants() {
+    const [plantsResponse, flagsResponse] = await Promise.all([
+      getPlants(),
+      getPlantFlags(),
+    ]);
+
+    setError(null);
+    setPlants(plantsResponse);
+    setPlantFlagDefinitions(flagsResponse);
+  }
+
+  async function loadCareModel() {
+    const [
+      plantsResponse,
+      tasksResponse,
+      actionsResponse,
+      resourcesResponse,
+      activitiesResponse,
+    ] = await Promise.all([
+      getPlants(),
+      getCareTasks(),
+      getCareActions(),
+      getActionResources(),
+      getCareActivities(),
+    ]);
+
+    setError(null);
+    setPlants(plantsResponse);
+    setCareTasks(tasksResponse);
+    setCareActions(actionsResponse);
+    setActionResources(resourcesResponse);
+    setCareActivities(activitiesResponse);
+  }
+
   useEffect(() => {
     queueMicrotask(() => {
       void loadDashboard();
@@ -201,15 +271,15 @@ export function App() {
     setTaxonForm((current) => ({ ...current, [field]: value }));
   }
 
-  function updateLocationForm(field: keyof LocationFormState, value: string | boolean) {
+  function updateLocationForm(field: keyof LocationFormState, value: string) {
     setLocationForm((current) => ({ ...current, [field]: value }));
   }
 
-  function updateActionForm(field: keyof ActionFormState, value: string | boolean) {
+  function updateActionForm(field: keyof ActionFormState, value: string) {
     setActionForm((current) => ({ ...current, [field]: value }));
   }
 
-  function updateResourceForm(field: keyof ResourceFormState, value: string | boolean) {
+  function updateResourceForm(field: keyof ResourceFormState, value: string) {
     setResourceForm((current) => ({ ...current, [field]: value }));
   }
 
@@ -217,7 +287,7 @@ export function App() {
     setActivityForm((current) => ({ ...current, [field]: value }));
   }
 
-  function updateFlagDefinitionForm(field: keyof FlagDefinitionFormState, value: string | boolean) {
+  function updateFlagDefinitionForm(field: keyof FlagDefinitionFormState, value: string) {
     setFlagDefinitionForm((current) => ({ ...current, [field]: value }));
   }
 
@@ -227,7 +297,7 @@ export function App() {
 
   function updateBulkScheduleForm(
     field: keyof BulkScheduleFormState,
-    value: string | boolean | string[],
+    value: string | string[],
   ) {
     setBulkScheduleForm((current) => ({ ...current, [field]: value }));
   }
@@ -414,7 +484,7 @@ export function App() {
         await updatePlant(editingPlantId, payload);
       }
       cancelEditing();
-      await loadDashboard();
+      await loadPlantsAndCareTasks();
     } catch {
       setError('Could not save the plant.');
     } finally {
@@ -438,7 +508,7 @@ export function App() {
         locationId: nextValues.locationId === undefined ? selectedPlant.locationId : nextValues.locationId,
         careSchedules: null,
       });
-      await loadDashboard();
+      await loadPlants();
     } catch {
       setError('Could not update the plant assignment.');
     } finally {
@@ -474,7 +544,7 @@ export function App() {
       if (editingPlantId === plant.id) {
         cancelEditing();
       }
-      await loadDashboard();
+      await loadPlantsAndCareTasks();
     } catch {
       setError('Could not delete the plant.');
     } finally {
@@ -497,7 +567,7 @@ export function App() {
         await updatePlantTaxon(editingTaxonId, payload);
       }
       cancelEditingTaxon();
-      await loadDashboard();
+      await loadTaxaAndPlants();
     } catch {
       setError('Could not save the taxon.');
     } finally {
@@ -517,7 +587,7 @@ export function App() {
       if (editingTaxonId === taxon.id) {
         cancelEditingTaxon();
       }
-      await loadDashboard();
+      await loadTaxaAndPlants();
     } catch {
       setError('Could not delete the taxon. It may still be used by a plant.');
     } finally {
@@ -540,7 +610,7 @@ export function App() {
         await updatePlantLocation(editingLocationId, payload);
       }
       cancelEditingLocation();
-      await loadDashboard();
+      await loadLocations();
     } catch {
       setError('Could not save the location.');
     } finally {
@@ -549,7 +619,7 @@ export function App() {
   }
 
   async function removeLocation(location: PlantLocation) {
-    const confirmed = window.confirm(`Delete ${location.name}? Locations in use will be disabled instead.`);
+    const confirmed = window.confirm(`Delete ${location.name}? Locations assigned to plants cannot be deleted.`);
     if (!confirmed) {
       return;
     }
@@ -560,10 +630,10 @@ export function App() {
       if (editingLocationId === location.id) {
         cancelEditingLocation();
       }
-      await loadDashboard();
+      await loadLocations();
     } catch {
-      await loadDashboard();
-      setError('Could not delete the location. If it is in use, it was disabled instead.');
+      await loadLocations();
+      setError('Could not delete the location. It may still be assigned to a plant.');
     } finally {
       setIsSaving(false);
     }
@@ -584,7 +654,7 @@ export function App() {
         await updateCareAction(editingActionId, payload);
       }
       cancelEditingAction();
-      await loadDashboard();
+      await loadCareModel();
     } catch {
       setError('Could not save the action.');
     } finally {
@@ -593,7 +663,7 @@ export function App() {
   }
 
   async function removeAction(action: CareAction) {
-    const confirmed = window.confirm(`Delete ${action.name}? Actions with care history will be disabled instead.`);
+    const confirmed = window.confirm(`Delete ${action.name}? Actions with care history cannot be deleted.`);
     if (!confirmed) {
       return;
     }
@@ -604,10 +674,10 @@ export function App() {
       if (editingActionId === action.id) {
         cancelEditingAction();
       }
-      await loadDashboard();
+      await loadCareModel();
     } catch {
-      await loadDashboard();
-      setError('Could not delete the action. If it has care history, it was disabled instead.');
+      await loadCareModel();
+      setError('Could not delete the action. It may still have care history.');
     } finally {
       setIsSaving(false);
     }
@@ -628,7 +698,7 @@ export function App() {
         await updateActionResource(editingResourceId, payload);
       }
       cancelEditingResource();
-      await loadDashboard();
+      await loadCareModel();
     } catch {
       setError('Could not save the resource.');
     } finally {
@@ -648,7 +718,7 @@ export function App() {
       if (editingResourceId === resource.id) {
         cancelEditingResource();
       }
-      await loadDashboard();
+      await loadCareModel();
     } catch {
       setError('Could not delete the resource.');
     } finally {
@@ -671,7 +741,7 @@ export function App() {
         await updateCareActivity(editingActivityId, payload);
       }
       cancelEditingActivity();
-      await loadDashboard();
+      await loadCareModel();
     } catch {
       setError('Could not save the activity.');
     } finally {
@@ -680,7 +750,7 @@ export function App() {
   }
 
   async function removeActivity(activity: CareActivity) {
-    const confirmed = window.confirm(`Delete ${activity.name}? Activities in use will be disabled instead.`);
+    const confirmed = window.confirm(`Delete ${activity.name}? Activities in use cannot be deleted.`);
     if (!confirmed) {
       return;
     }
@@ -691,10 +761,10 @@ export function App() {
       if (editingActivityId === activity.id) {
         cancelEditingActivity();
       }
-      await loadDashboard();
+      await loadCareModel();
     } catch {
-      await loadDashboard();
-      setError('Could not delete the activity. If it is in use, it was disabled instead.');
+      await loadCareModel();
+      setError('Could not delete the activity. It may still be in use.');
     } finally {
       setIsSaving(false);
     }
@@ -715,7 +785,7 @@ export function App() {
         await updatePlantFlag(editingFlagDefinitionId, payload);
       }
       cancelEditingFlagDefinition();
-      await loadDashboard();
+      await loadFlagsAndPlants();
     } catch {
       setError('Could not save the plant flag.');
     } finally {
@@ -733,7 +803,7 @@ export function App() {
     try {
       await savePlantCareSchedulesBulk(toBulkSchedulePayload(bulkScheduleForm));
       setBulkScheduleForm(emptyBulkScheduleForm);
-      await loadDashboard();
+      await loadPlantsAndCareTasks();
     } catch {
       setError('Could not apply the care schedule.');
     } finally {
@@ -751,7 +821,7 @@ export function App() {
     try {
       await removePlantCareSchedulesBulk(toBulkSchedulePayload(bulkScheduleForm));
       setBulkScheduleForm(emptyBulkScheduleForm);
-      await loadDashboard();
+      await loadPlantsAndCareTasks();
     } catch {
       setError('Could not remove the care schedule.');
     } finally {
@@ -760,7 +830,7 @@ export function App() {
   }
 
   async function removeFlagDefinition(flag: PlantFlagDefinition) {
-    const confirmed = window.confirm(`Delete ${flag.name}? Flags assigned to plants will be disabled instead.`);
+    const confirmed = window.confirm(`Delete ${flag.name}? Flags assigned to plants cannot be deleted.`);
     if (!confirmed) {
       return;
     }
@@ -771,10 +841,10 @@ export function App() {
       if (editingFlagDefinitionId === flag.id) {
         cancelEditingFlagDefinition();
       }
-      await loadDashboard();
+      await loadFlagsAndPlants();
     } catch {
-      await loadDashboard();
-      setError('Could not delete the flag. If it is assigned to plants, it was disabled instead.');
+      await loadFlagsAndPlants();
+      setError('Could not delete the flag. It may still be assigned to a plant.');
     } finally {
       setIsSaving(false);
     }
@@ -790,7 +860,7 @@ export function App() {
     try {
       await assignPlantFlag(selectedPlantId, toPlantFlagPayload(plantFlagForm));
       setPlantFlagForm(emptyPlantFlagForm);
-      await loadDashboard();
+      await loadPlants();
     } catch {
       setError('Could not attach the plant flag.');
     } finally {
@@ -806,7 +876,7 @@ export function App() {
     setIsSaving(true);
     try {
       await resolvePlantFlag(selectedPlantId, flag.id);
-      await loadDashboard();
+      await loadPlants();
     } catch {
       setError('Could not resolve the plant flag.');
     } finally {
@@ -827,7 +897,7 @@ export function App() {
     setIsSaving(true);
     try {
       await removePlantFlagAssignment(selectedPlantId, flag.id);
-      await loadDashboard();
+      await loadPlants();
     } catch {
       setError('Could not remove the plant flag.');
     } finally {
@@ -845,7 +915,7 @@ export function App() {
         notes: '',
         resources: [],
       });
-      await loadDashboard();
+      await loadPlantsAndCareTasks();
     } catch {
       setError('Could not log the care task.');
     } finally {
@@ -874,7 +944,7 @@ export function App() {
         notes: '',
         resources: [],
       });
-      await loadDashboard();
+      await loadPlantsAndCareTasks();
     } catch {
       setError('Could not log the due tasks.');
     } finally {
@@ -985,11 +1055,11 @@ export function App() {
           <section className="catalog-help" aria-label="Catalog status">
             <h3>Catalog Status</h3>
             <p>{dueCount} due</p>
-            <p>{plantLocations.filter((location) => location.isEnabled).length} active locations</p>
-            <p>{careActivities.filter((activity) => activity.isEnabled).length} active activities</p>
-            <p>{careActions.filter((action) => action.isEnabled).length} active actions</p>
-            <p>{actionResources.filter((resource) => resource.isEnabled).length} active resources</p>
-            <p>{plantFlagDefinitions.filter((flag) => flag.isEnabled).length} active flags</p>
+            <p>{plantLocations.length} locations</p>
+            <p>{careActivities.length} activities</p>
+            <p>{careActions.length} actions</p>
+            <p>{actionResources.length} resources</p>
+            <p>{plantFlagDefinitions.length} flags</p>
           </section>
         </aside>
 

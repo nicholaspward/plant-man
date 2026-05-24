@@ -11,8 +11,7 @@ namespace plant_manager.Endpoints
             app.MapGet("/api/plant-flags", async (ApplicationDbContext db) =>
             {
                 var definitions = await db.PlantFlagDefinitions
-                    .OrderByDescending(definition => definition.IsEnabled)
-                    .ThenBy(definition => definition.Name)
+                    .OrderBy(definition => definition.Name)
                     .Select(definition => PlantFlagDefinitionDto.FromDefinition(definition))
                     .ToListAsync();
 
@@ -37,8 +36,7 @@ namespace plant_manager.Endpoints
                 var definition = new PlantFlagDefinition
                 {
                     Name = name,
-                    Color = NormalizeColor(request.Color),
-                    IsEnabled = request.IsEnabled
+                    Color = NormalizeColor(request.Color)
                 };
 
                 db.PlantFlagDefinitions.Add(definition);
@@ -70,7 +68,6 @@ namespace plant_manager.Endpoints
 
                 definition.Name = name;
                 definition.Color = NormalizeColor(request.Color);
-                definition.IsEnabled = request.IsEnabled;
 
                 await db.SaveChangesAsync();
 
@@ -88,9 +85,7 @@ namespace plant_manager.Endpoints
                 var isUsed = await db.PlantFlags.AnyAsync(flag => flag.PlantFlagDefinitionId == id);
                 if (isUsed)
                 {
-                    definition.IsEnabled = false;
-                    await db.SaveChangesAsync();
-                    return Results.Conflict(new { error = "Flag is assigned to plants, so it was disabled instead of deleted." });
+                    return Results.Conflict(new { error = "Flag is assigned to plants." });
                 }
 
                 db.PlantFlagDefinitions.Remove(definition);
@@ -111,9 +106,9 @@ namespace plant_manager.Endpoints
                 }
 
                 var definition = await db.PlantFlagDefinitions.FindAsync(request.PlantFlagDefinitionId);
-                if (definition is null || !definition.IsEnabled)
+                if (definition is null)
                 {
-                    return Results.BadRequest(new { error = "Flag was not found or is disabled." });
+                    return Results.BadRequest(new { error = "Flag was not found." });
                 }
 
                 var hasActiveFlag = await db.PlantFlags.AnyAsync(flag =>

@@ -16,8 +16,7 @@ namespace plant_manager.Endpoints
                     .Include(activity => activity.Actions)
                     .ThenInclude(action => action.Resources)
                     .ThenInclude(resource => resource.ActionResource)
-                    .OrderByDescending(activity => activity.IsEnabled)
-                    .ThenBy(activity => activity.Name)
+                    .OrderBy(activity => activity.Name)
                     .Select(activity => CareActivityDto.FromCareActivity(activity))
                     .ToListAsync();
 
@@ -43,7 +42,6 @@ namespace plant_manager.Endpoints
                 {
                     Name = name,
                     Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
-                    IsEnabled = request.IsEnabled,
                     Actions = validation.Actions
                 };
 
@@ -83,7 +81,6 @@ namespace plant_manager.Endpoints
 
                 activity.Name = name;
                 activity.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
-                activity.IsEnabled = request.IsEnabled;
                 db.CareActivityActions.RemoveRange(activity.Actions);
                 activity.Actions = validation.Actions;
 
@@ -104,9 +101,7 @@ namespace plant_manager.Endpoints
                     || await db.PlantCareSchedules.AnyAsync(schedule => schedule.CareActivityId == id);
                 if (hasHistory)
                 {
-                    activity.IsEnabled = false;
-                    await db.SaveChangesAsync();
-                    return Results.Conflict(new { error = "Activity is in use, so it was disabled instead of deleted." });
+                    return Results.Conflict(new { error = "Activity is in use." });
                 }
 
                 db.CareActivities.Remove(activity);
@@ -150,11 +145,6 @@ namespace plant_manager.Endpoints
                 return ([], "One or more care actions were not found.");
             }
 
-            if (actionsById.Values.Any(action => !action.IsEnabled))
-            {
-                return ([], "Disabled actions cannot be used in activities.");
-            }
-
             var requestedResources = requestedActions
                 .SelectMany(action => action.Resources ?? [])
                 .GroupBy(resource => resource.ActionResourceId)
@@ -179,11 +169,6 @@ namespace plant_manager.Endpoints
             if (resourcesById.Count != resourceIds.Count)
             {
                 return ([], "One or more resources were not found.");
-            }
-
-            if (resourcesById.Values.Any(resource => !resource.IsEnabled))
-            {
-                return ([], "Disabled resources cannot be used in activities.");
             }
 
             var activityActions = requestedActions

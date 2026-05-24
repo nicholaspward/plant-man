@@ -36,7 +36,6 @@ Reference data for where plants live.
 | `id` | `int` | Yes | Primary key |
 | `name` | `string` | Yes | User-facing location name |
 | `notes` | `string` | No | Optional details |
-| `is_enabled` | `bool` | Yes | Whether the location is available for new assignments |
 
 ## `CareAction`
 
@@ -47,7 +46,6 @@ A reusable care verb, such as water, prune, fertilize, inspect, or repot.
 | `id` | `int` | Yes | Primary key |
 | `name` | `string` | Yes | User-facing action name |
 | `description` | `string` | No | Optional explanation |
-| `is_enabled` | `bool` | Yes | Whether the action is available for use |
 
 ## `ActionResource`
 
@@ -57,9 +55,7 @@ A resource used while performing care.
 | - | - | - | - |
 | `id` | `int` | Yes | Primary key |
 | `name` | `string` | Yes | Resource name |
-| `category` | `string` | No | Optional grouping, such as `Fertilizer`, `Medium`, `Treatment`, `Equipment`, or `Container` |
 | `notes` | `string` | No | Optional details |
-| `is_enabled` | `bool` | Yes | Whether the resource is available for use |
 
 ## `CareActivity`
 
@@ -70,7 +66,6 @@ A configurable care activity made from one or more care actions.
 | `id` | `int` | Yes | Primary key |
 | `name` | `string` | Yes | User-facing activity name |
 | `notes` | `string` | No | Optional details |
-| `is_enabled` | `bool` | Yes | Whether the activity is available for schedules and logs |
 
 ## `CareActivityAction`
 
@@ -114,7 +109,6 @@ A per-plant recurring schedule for one care activity. Scheduler is the UI owner 
 | `ends_mode` | `string` | Yes | `on` or `after` |
 | `ends_on` | `date` | No | End date when `ends_mode` is `on` |
 | `ends_after_occurrences` | `int` | No | Occurrence limit when `ends_mode` is `after` |
-| `is_enabled` | `bool` | Yes | Whether this schedule contributes to care tasks |
 
 ## `ActionLog`
 
@@ -150,7 +144,6 @@ A reusable plant flag.
 | `id` | `int` | Yes | Primary key |
 | `name` | `string` | Yes | Flag name |
 | `color` | `string` | Yes | Display color |
-| `is_enabled` | `bool` | Yes | Whether the flag can be assigned |
 
 ## `PlantFlag`
 

@@ -21,10 +21,6 @@ namespace plant_manager.Endpoints
                     .ThenInclude(activity => activity.Actions)
                     .ThenInclude(action => action.Resources)
                     .ThenInclude(resource => resource.ActionResource)
-                    .Where(schedule =>
-                        schedule.IsEnabled
-                        && schedule.CareActivity.Actions.All(action => action.CareAction.IsEnabled)
-                        && schedule.CareActivity.IsEnabled)
                     .OrderBy(schedule => schedule.Plant.Nickname)
                     .ThenBy(schedule => schedule.CareActivity.Name)
                     .ToListAsync();
@@ -86,17 +82,16 @@ namespace plant_manager.Endpoints
                 }
 
                 var primaryAction = activity.PrimaryAction();
-                if (!activity.IsEnabled || primaryAction is null || activity.Actions.Any(action => !action.CareAction.IsEnabled))
+                if (primaryAction is null)
                 {
-                    return Results.BadRequest(new { error = "Disabled activities cannot be logged." });
+                    return Results.BadRequest(new { error = "Care activity has no configured actions." });
                 }
 
                 var today = DateOnly.FromDateTime(DateTime.UtcNow);
                 var schedules = await db.PlantCareSchedules
                     .Include(schedule => schedule.Plant)
                     .Where(schedule =>
-                        schedule.IsEnabled
-                        && schedule.CareActivityId == activity.Id
+                        schedule.CareActivityId == activity.Id
                         && plantIds.Contains(schedule.PlantId))
                     .ToListAsync();
                 var schedulePlantIds = schedules
@@ -104,7 +99,7 @@ namespace plant_manager.Endpoints
                     .ToHashSet();
                 if (schedulePlantIds.Count != plantIds.Count)
                 {
-                    return Results.BadRequest(new { error = "One or more plants do not have this enabled schedule." });
+                    return Results.BadRequest(new { error = "One or more plants do not have this schedule." });
                 }
 
                 var latestLogs = await db.ActionLogs
@@ -167,11 +162,6 @@ namespace plant_manager.Endpoints
                 if (resourcesById.Count != requestedResourceIds.Count)
                 {
                     return Results.BadRequest(new { error = "One or more resources were not found." });
-                }
-
-                if (resourcesById.Values.Any(resource => !resource.IsEnabled))
-                {
-                    return Results.BadRequest(new { error = "Disabled resources cannot be logged." });
                 }
 
                 var performedOn = request.PerformedOn ?? today;

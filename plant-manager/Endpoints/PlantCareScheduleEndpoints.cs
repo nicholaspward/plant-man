@@ -31,9 +31,9 @@ namespace plant_manager.Endpoints
                 }
 
                 var primaryAction = activity.PrimaryAction();
-                if (!activity.IsEnabled || primaryAction is null || activity.Actions.Any(action => !action.CareAction.IsEnabled))
+                if (primaryAction is null)
                 {
-                    return Results.BadRequest(new { error = "Disabled activities cannot be scheduled." });
+                    return Results.BadRequest(new { error = "Care activity has no configured actions." });
                 }
 
                 var plants = await db.Plants
@@ -73,7 +73,6 @@ namespace plant_manager.Endpoints
                     schedule.CareActionId = primaryAction.Id;
                     schedule.CareActivityId = activity.Id;
                     ApplyRecurrence(schedule, recurrence);
-                    schedule.IsEnabled = request.IsEnabled;
                 }
 
                 await db.SaveChangesAsync();

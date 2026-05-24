@@ -57,7 +57,6 @@ namespace plant_manager.Data
                       .ValueGeneratedOnAdd();
                 entity.Property(e => e.Name).HasMaxLength(120).IsRequired();
                 entity.Property(e => e.Notes).HasMaxLength(1000);
-                entity.Property(e => e.IsEnabled).IsRequired();
                 entity.HasIndex(e => e.Name).IsUnique();
             });
 
@@ -68,7 +67,6 @@ namespace plant_manager.Data
                       .ValueGeneratedOnAdd();
                 entity.Property(e => e.Name).HasMaxLength(80).IsRequired();
                 entity.Property(e => e.Description).HasMaxLength(400);
-                entity.Property(e => e.IsEnabled).IsRequired();
                 entity.HasIndex(e => e.Name).IsUnique();
             });
 
@@ -78,9 +76,7 @@ namespace plant_manager.Data
                 entity.Property(e => e.Id)
                       .ValueGeneratedOnAdd();
                 entity.Property(e => e.Name).HasMaxLength(120).IsRequired();
-                entity.Property(e => e.Category).HasMaxLength(80);
                 entity.Property(e => e.Notes).HasMaxLength(1000);
-                entity.Property(e => e.IsEnabled).IsRequired();
                 entity.HasIndex(e => e.Name).IsUnique();
             });
 
@@ -91,7 +87,6 @@ namespace plant_manager.Data
                       .ValueGeneratedOnAdd();
                 entity.Property(e => e.Name).HasMaxLength(120).IsRequired();
                 entity.Property(e => e.Notes).HasMaxLength(1000);
-                entity.Property(e => e.IsEnabled).IsRequired();
                 entity.HasIndex(e => e.Name).IsUnique();
             });
 
@@ -174,7 +169,6 @@ namespace plant_manager.Data
                 entity.Property(e => e.EndsMode).HasMaxLength(20).IsRequired();
                 entity.Property(e => e.EndsOn);
                 entity.Property(e => e.EndsAfterOccurrences);
-                entity.Property(e => e.IsEnabled).IsRequired();
                 entity.HasIndex(e => new { e.PlantId, e.CareActionId }).IsUnique(false);
                 entity.HasIndex(e => new { e.PlantId, e.CareActivityId }).IsUnique();
                 entity.HasOne(e => e.Plant)
@@ -198,7 +192,6 @@ namespace plant_manager.Data
                       .ValueGeneratedOnAdd();
                 entity.Property(e => e.Name).HasMaxLength(120).IsRequired();
                 entity.Property(e => e.Color).HasMaxLength(20).IsRequired();
-                entity.Property(e => e.IsEnabled).IsRequired();
                 entity.HasIndex(e => e.Name).IsUnique();
             });
 

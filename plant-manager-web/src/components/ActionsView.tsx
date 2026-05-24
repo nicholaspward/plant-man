@@ -15,7 +15,7 @@ type ActionsViewProps = {
   onCloseDetail: () => void;
   onDelete: (action: CareAction) => void;
   onEdit: (action: CareAction) => void;
-  onFieldChange: (field: keyof ActionFormState, value: string | boolean) => void;
+  onFieldChange: (field: keyof ActionFormState, value: string) => void;
   onNew: () => void;
   onOpenDetail: (action: CareAction) => void;
   onSave: () => void;
@@ -39,15 +39,13 @@ export function ActionsView({
   onOpenDetail,
   onSave,
 }: ActionsViewProps) {
-  const enabledCount = actions.filter((action) => action.isEnabled).length;
-
   return (
     <>
       <section className="summary-panel" aria-labelledby="actions-summary-heading">
         <div>
           <p className="eyebrow">Care menu</p>
           <h2 id="actions-summary-heading">
-            {isLoading ? 'Loading actions' : `${enabledCount} actions enabled`}
+            {isLoading ? 'Loading actions' : `${actions.length} actions`}
           </h2>
           <p>{error ?? 'Configure the care actions available when logging plant work.'}</p>
         </div>
@@ -77,10 +75,6 @@ export function ActionsView({
             <div>
               <span>Description</span>
               <strong>{selectedAction.description ?? 'No description'}</strong>
-            </div>
-            <div>
-              <span>Status</span>
-              <strong>{selectedAction.isEnabled ? 'Enabled' : 'Disabled'}</strong>
             </div>
           </div>
         </section>
@@ -113,14 +107,6 @@ export function ActionsView({
               onChange={(event) => onFieldChange('description', event.target.value)}
             />
           </label>
-          <label className="toggle-field">
-            <input
-              checked={form.isEnabled}
-              type="checkbox"
-              onChange={(event) => onFieldChange('isEnabled', event.target.checked)}
-            />
-            Enabled
-          </label>
         </div>
 
         <div className="form-actions">
@@ -151,8 +137,6 @@ export function ActionsView({
                 <h3>{action.name}</h3>
                 <p>
                   {action.description ?? 'No description'}
-                  {' - '}
-                  {action.isEnabled ? 'Enabled' : 'Disabled'}
                 </p>
               </div>
               <div className="row-actions">

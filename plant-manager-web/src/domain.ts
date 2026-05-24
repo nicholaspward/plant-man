@@ -31,7 +31,6 @@ export type PlantCareSchedule = {
   lastPerformed: string;
   nextCare: string;
   status: CareStatus;
-  isEnabled: boolean;
 };
 
 export type ScheduleRecurrenceMode = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
@@ -52,22 +51,18 @@ export type PlantLocation = {
   id: number;
   name: string;
   notes: string | null;
-  isEnabled: boolean;
 };
 
 export type CareAction = {
   id: number;
   name: string;
   description: string | null;
-  isEnabled: boolean;
 };
 
 export type ActionResource = {
   id: number;
   name: string;
-  category: string | null;
   notes: string | null;
-  isEnabled: boolean;
 };
 
 export type CareActivity = {
@@ -77,7 +72,6 @@ export type CareActivity = {
   action: string;
   actions: CareActivityAction[];
   notes: string | null;
-  isEnabled: boolean;
 };
 
 export type CareActivityAction = {
@@ -91,7 +85,6 @@ export type CareActivityAction = {
 export type CareActivityActionResource = {
   actionResourceId: number;
   name: string;
-  category: string | null;
   quantity: number | null;
   unit: string | null;
   notes: string | null;
@@ -101,7 +94,6 @@ export type PlantFlagDefinition = {
   id: number;
   name: string;
   color: string;
-  isEnabled: boolean;
 };
 
 export type PlantFlag = {
@@ -132,7 +124,6 @@ export type PlantCareSchedulePayload = {
   endsMode: ScheduleEndsMode;
   endsOn: string | null;
   endsAfterOccurrences: number | null;
-  isEnabled: boolean;
 };
 
 export type BulkPlantCareSchedulePayload = {
@@ -147,7 +138,6 @@ export type BulkPlantCareSchedulePayload = {
   endsMode: ScheduleEndsMode;
   endsOn: string | null;
   endsAfterOccurrences: number | null;
-  isEnabled: boolean;
 };
 
 export type PlantTaxonPayload = {
@@ -162,27 +152,22 @@ export type PlantTaxonPayload = {
 export type PlantLocationPayload = {
   name: string;
   notes: string | null;
-  isEnabled: boolean;
 };
 
 export type CareActionPayload = {
   name: string;
   description: string | null;
-  isEnabled: boolean;
 };
 
 export type ActionResourcePayload = {
   name: string;
-  category: string | null;
   notes: string | null;
-  isEnabled: boolean;
 };
 
 export type CareActivityPayload = {
   name: string;
   actions: CareActivityActionPayload[];
   notes: string | null;
-  isEnabled: boolean;
 };
 
 export type CareActivityActionPayload = {
@@ -200,7 +185,6 @@ export type CareActivityActionResourcePayload = {
 export type PlantFlagDefinitionPayload = {
   name: string;
   color: string | null;
-  isEnabled: boolean;
 };
 
 export type AssignPlantFlagPayload = {

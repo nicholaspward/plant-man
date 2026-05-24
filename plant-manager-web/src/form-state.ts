@@ -36,27 +36,22 @@ export const emptyTaxonForm = {
 export const emptyLocationForm = {
   name: '',
   notes: '',
-  isEnabled: true,
 };
 
 export const emptyActionForm = {
   name: '',
   description: '',
-  isEnabled: true,
 };
 
 export const emptyResourceForm = {
   name: '',
-  category: '',
   notes: '',
-  isEnabled: true,
 };
 
 export const emptyActivityForm = {
   name: '',
   actions: [] as CareActivityActionFormState[],
   notes: '',
-  isEnabled: true,
 };
 
 export type CareActivityActionResourceFormState = {
@@ -74,7 +69,6 @@ export type CareActivityActionFormState = {
 export const emptyFlagDefinitionForm = {
   name: '',
   color: '#f2f2f2',
-  isEnabled: true,
 };
 
 export const emptyPlantFlagForm = {
@@ -94,7 +88,6 @@ export const emptyBulkScheduleForm = {
   endsMode: 'after',
   endsOn: '',
   endsAfterOccurrences: '12',
-  isEnabled: true,
   plantIds: [] as string[],
 };
 
@@ -128,7 +121,6 @@ export function toLocationForm(location: PlantLocation): LocationFormState {
   return {
     name: location.name,
     notes: location.notes ?? '',
-    isEnabled: location.isEnabled,
   };
 }
 
@@ -136,7 +128,6 @@ export function toLocationPayload(form: LocationFormState): PlantLocationPayload
   return {
     name: form.name.trim(),
     notes: form.notes.trim() || null,
-    isEnabled: form.isEnabled,
   };
 }
 
@@ -166,7 +157,6 @@ export function toActionForm(action: CareAction): ActionFormState {
   return {
     name: action.name,
     description: action.description ?? '',
-    isEnabled: action.isEnabled,
   };
 }
 
@@ -174,25 +164,20 @@ export function toActionPayload(form: ActionFormState): CareActionPayload {
   return {
     name: form.name.trim(),
     description: form.description.trim() || null,
-    isEnabled: form.isEnabled,
   };
 }
 
 export function toResourceForm(resource: ActionResource): ResourceFormState {
   return {
     name: resource.name,
-    category: resource.category ?? '',
     notes: resource.notes ?? '',
-    isEnabled: resource.isEnabled,
   };
 }
 
 export function toResourcePayload(form: ResourceFormState): ActionResourcePayload {
   return {
     name: form.name.trim(),
-    category: form.category.trim() || null,
     notes: form.notes.trim() || null,
-    isEnabled: form.isEnabled,
   };
 }
 
@@ -209,7 +194,6 @@ export function toActivityForm(activity: CareActivity): ActivityFormState {
       })),
     })),
     notes: activity.notes ?? '',
-    isEnabled: activity.isEnabled,
   };
 }
 
@@ -226,7 +210,6 @@ export function toActivityPayload(form: ActivityFormState): CareActivityPayload 
       })),
     })),
     notes: form.notes.trim() || null,
-    isEnabled: form.isEnabled,
   };
 }
 
@@ -234,7 +217,6 @@ export function toFlagDefinitionForm(flag: PlantFlagDefinition): FlagDefinitionF
   return {
     name: flag.name,
     color: flag.color,
-    isEnabled: flag.isEnabled,
   };
 }
 
@@ -242,7 +224,6 @@ export function toFlagDefinitionPayload(form: FlagDefinitionFormState): PlantFla
   return {
     name: form.name.trim(),
     color: form.color.trim() || null,
-    isEnabled: form.isEnabled,
   };
 }
 
@@ -271,7 +252,6 @@ export function toBulkSchedulePayload(form: BulkScheduleFormState): BulkPlantCar
       : form.endsMode === 'after'
         ? Number(form.endsAfterOccurrences)
         : null,
-    isEnabled: form.isEnabled,
   };
 }
 

@@ -18,9 +18,7 @@ namespace plant_manager.Data.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Name = table.Column<string>(type: "TEXT", maxLength: 120, nullable: false),
-                    Category = table.Column<string>(type: "TEXT", maxLength: 80, nullable: true),
-                    Notes = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
-                    IsEnabled = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Notes = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -34,8 +32,7 @@ namespace plant_manager.Data.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Name = table.Column<string>(type: "TEXT", maxLength: 80, nullable: false),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 400, nullable: true),
-                    IsEnabled = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Description = table.Column<string>(type: "TEXT", maxLength: 400, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -49,8 +46,7 @@ namespace plant_manager.Data.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Name = table.Column<string>(type: "TEXT", maxLength: 120, nullable: false),
-                    Notes = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
-                    IsEnabled = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Notes = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -64,8 +60,7 @@ namespace plant_manager.Data.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Name = table.Column<string>(type: "TEXT", maxLength: 120, nullable: false),
-                    Color = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    IsEnabled = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Color = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -79,8 +74,7 @@ namespace plant_manager.Data.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Name = table.Column<string>(type: "TEXT", maxLength: 120, nullable: false),
-                    Notes = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true),
-                    IsEnabled = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Notes = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -238,8 +232,7 @@ namespace plant_manager.Data.Migrations
                     RepeatOnDays = table.Column<string>(type: "TEXT", maxLength: 40, nullable: true),
                     EndsMode = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
                     EndsOn = table.Column<DateOnly>(type: "TEXT", nullable: true),
-                    EndsAfterOccurrences = table.Column<int>(type: "INTEGER", nullable: true),
-                    IsEnabled = table.Column<bool>(type: "INTEGER", nullable: false)
+                    EndsAfterOccurrences = table.Column<int>(type: "INTEGER", nullable: true)
                 },
                 constraints: table =>
                 {

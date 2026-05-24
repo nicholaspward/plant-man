@@ -24,8 +24,7 @@ namespace plant_manager
         string? RepeatOnDays,
         string? EndsMode,
         DateOnly? EndsOn,
-        int? EndsAfterOccurrences,
-        bool IsEnabled);
+        int? EndsAfterOccurrences);
 
     public record BulkSavePlantCareScheduleRequest(
         IReadOnlyList<int> PlantIds,
@@ -38,8 +37,7 @@ namespace plant_manager
         string? RepeatOnDays,
         string? EndsMode,
         DateOnly? EndsOn,
-        int? EndsAfterOccurrences,
-        bool IsEnabled);
+        int? EndsAfterOccurrences);
 
     public record SavePlantTaxonRequest(
         string Name,
@@ -51,25 +49,20 @@ namespace plant_manager
 
     public record SavePlantLocationRequest(
         string Name,
-        string? Notes,
-        bool IsEnabled);
+        string? Notes);
 
     public record SaveCareActionRequest(
         string Name,
-        string? Description,
-        bool IsEnabled);
+        string? Description);
 
     public record SaveActionResourceRequest(
         string Name,
-        string? Category,
-        string? Notes,
-        bool IsEnabled);
+        string? Notes);
 
     public record SaveCareActivityRequest(
         string Name,
         IReadOnlyList<SaveCareActivityActionRequest> Actions,
-        string? Notes,
-        bool IsEnabled);
+        string? Notes);
 
     public record SaveCareActivityActionRequest(
         int CareActionId,
@@ -84,7 +77,6 @@ namespace plant_manager
     public record CareActivityActionResourceDto(
         int ActionResourceId,
         string Name,
-        string? Category,
         decimal? Quantity,
         string? Unit,
         string? Notes)
@@ -94,7 +86,6 @@ namespace plant_manager
             new(
                 resource.ActionResourceId,
                 resource.ActionResource.Name,
-                resource.ActionResource.Category,
                 resource.Quantity,
                 resource.Unit,
                 resource.Notes);
@@ -121,8 +112,7 @@ namespace plant_manager
 
     public record SavePlantFlagDefinitionRequest(
         string Name,
-        string? Color,
-        bool IsEnabled);
+        string? Color);
 
     public record AssignPlantFlagRequest(
         int PlantFlagDefinitionId,
@@ -183,32 +173,28 @@ namespace plant_manager
     public record PlantLocationDto(
         int Id,
         string Name,
-        string? Notes,
-        bool IsEnabled)
+        string? Notes)
     {
         public static PlantLocationDto FromLocation(PlantLocation location) =>
-            new(location.Id, location.Name, location.Notes, location.IsEnabled);
+            new(location.Id, location.Name, location.Notes);
     }
 
     public record CareActionDto(
         int Id,
         string Name,
-        string? Description,
-        bool IsEnabled)
+        string? Description)
     {
         public static CareActionDto FromCareAction(CareAction action) =>
-            new(action.Id, action.Name, action.Description, action.IsEnabled);
+            new(action.Id, action.Name, action.Description);
     }
 
     public record ActionResourceDto(
         int Id,
         string Name,
-        string? Category,
-        string? Notes,
-        bool IsEnabled)
+        string? Notes)
     {
         public static ActionResourceDto FromActionResource(ActionResource resource) =>
-            new(resource.Id, resource.Name, resource.Category, resource.Notes, resource.IsEnabled);
+            new(resource.Id, resource.Name, resource.Notes);
     }
 
     public record CareActivityDto(
@@ -217,8 +203,7 @@ namespace plant_manager
         int CareActionId,
         string Action,
         IReadOnlyList<CareActivityActionDto> Actions,
-        string? Notes,
-        bool IsEnabled)
+        string? Notes)
     {
         public static CareActivityDto FromCareActivity(CareActivity activity) =>
             new(
@@ -230,8 +215,7 @@ namespace plant_manager
                     .OrderBy(action => action.SortOrder)
                     .Select(CareActivityActionDto.FromCareActivityAction)
                     .ToList(),
-                activity.Notes,
-                activity.IsEnabled);
+                activity.Notes);
     }
 
     public record PlantDto(
@@ -257,7 +241,6 @@ namespace plant_manager
                     today))
                 .ToList();
             var nextCare = schedules
-                .Where(schedule => schedule.IsEnabled)
                 .Select(schedule =>
                 {
                     var source = plant.CareSchedules.First(item => item.Id == schedule.Id);
@@ -312,8 +295,7 @@ namespace plant_manager
         DateOnly? LastPerformedOn,
         string LastPerformed,
         string NextCare,
-        string Status,
-        bool IsEnabled)
+        string Status)
     {
         public static PlantCareScheduleDto FromSchedule(
             PlantCareSchedule schedule,
@@ -339,8 +321,7 @@ namespace plant_manager
                 lastPerformedOn,
                 PlantCareFormatter.FormatRelativeDate(lastPerformedOn, today, "Never"),
                 PlantCareFormatter.FormatRelativeDate(nextCare, today, "Unscheduled"),
-                PlantCareFormatter.GetStatus(nextCare, today),
-                schedule.IsEnabled);
+                PlantCareFormatter.GetStatus(nextCare, today));
         }
 
         private static int GetCompletedOccurrences(PlantCareSchedule schedule) =>
@@ -395,15 +376,13 @@ namespace plant_manager
     public record PlantFlagDefinitionDto(
         int Id,
         string Name,
-        string Color,
-        bool IsEnabled)
+        string Color)
     {
         public static PlantFlagDefinitionDto FromDefinition(PlantFlagDefinition definition) =>
             new(
                 definition.Id,
                 definition.Name,
-                definition.Color,
-                definition.IsEnabled);
+                definition.Color);
     }
 
     public record PlantFlagDto(
@@ -455,7 +434,6 @@ namespace plant_manager
     public record ActionLogResourceDto(
         int ActionResourceId,
         string Name,
-        string? Category,
         decimal? Quantity,
         string? Unit)
     {
@@ -463,7 +441,6 @@ namespace plant_manager
             new(
                 resource.ActionResourceId,
                 resource.ActionResource.Name,
-                resource.ActionResource.Category,
                 resource.Quantity,
                 resource.Unit);
     }

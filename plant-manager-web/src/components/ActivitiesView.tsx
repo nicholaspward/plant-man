@@ -46,10 +46,6 @@ export function ActivitiesView({
   onSave,
   resources,
 }: ActivitiesViewProps) {
-  const enabledCount = activities.filter((activity) => activity.isEnabled).length;
-  const enabledActions = actions.filter((action) => action.isEnabled);
-  const enabledResources = resources.filter((resource) => resource.isEnabled);
-
   function updateAction(index: number, nextAction: ActivityFormState['actions'][number]) {
     onFieldChange(
       'actions',
@@ -77,7 +73,7 @@ export function ActivitiesView({
         <div>
           <p className="eyebrow">Care activities</p>
           <h2 id="activities-summary-heading">
-            {isLoading ? 'Loading activities' : `${enabledCount} activities enabled`}
+            {isLoading ? 'Loading activities' : `${activities.length} activities`}
           </h2>
           <p>{error ?? 'Configure reusable care bundles with actions and per-action resources.'}</p>
         </div>
@@ -107,10 +103,6 @@ export function ActivitiesView({
             <div>
               <span>Notes</span>
               <strong>{selectedActivity.notes ?? 'No notes'}</strong>
-            </div>
-            <div>
-              <span>Status</span>
-              <strong>{selectedActivity.isEnabled ? 'Enabled' : 'Disabled'}</strong>
             </div>
           </div>
           <div className="detail-list">
@@ -192,7 +184,7 @@ export function ActivitiesView({
                         )}
                       >
                         <option value="">Select an action</option>
-                        {enabledActions
+                        {actions
                           .filter((action) => !selectedActionIds.has(String(action.id)))
                           .map((action) => (
                             <option key={action.id} value={action.id}>
@@ -238,7 +230,7 @@ export function ActivitiesView({
                               )}
                             >
                               <option value="">Select a resource</option>
-                              {enabledResources
+                              {resources
                                 .filter((resource) => !selectedResourceIds.has(String(resource.id)))
                                 .map((resource) => (
                                   <option key={resource.id} value={resource.id}>
@@ -309,7 +301,7 @@ export function ActivitiesView({
                       <button
                         className="small-action"
                         type="button"
-                        disabled={enabledResources.length === 0}
+                        disabled={resources.length === 0}
                         onClick={() => updateAction(
                           actionIndex,
                           {
@@ -341,7 +333,7 @@ export function ActivitiesView({
             <button
               className="small-action"
               type="button"
-              disabled={enabledActions.length === 0}
+              disabled={actions.length === 0}
               onClick={addAction}
             >
               <Plus size={16} />
@@ -354,14 +346,6 @@ export function ActivitiesView({
               value={form.notes}
               onChange={(event) => onFieldChange('notes', event.target.value)}
             />
-          </label>
-          <label className="toggle-field">
-            <input
-              checked={form.isEnabled}
-              type="checkbox"
-              onChange={(event) => onFieldChange('isEnabled', event.target.checked)}
-            />
-            Enabled
           </label>
         </div>
 
@@ -391,7 +375,7 @@ export function ActivitiesView({
             <article className="plant-row" key={activity.id}>
               <div>
                 <h3>{activity.name}</h3>
-                <p>{formatActivitySummary(activity)} - {activity.isEnabled ? 'Enabled' : 'Disabled'}</p>
+                <p>{formatActivitySummary(activity)}</p>
               </div>
               <div className="row-actions">
                 <button className="icon-button compact" type="button" aria-label={`View ${activity.name}`} onClick={() => onOpenDetail(activity)}>

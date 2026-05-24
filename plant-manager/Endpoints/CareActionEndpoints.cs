@@ -11,8 +11,7 @@ namespace plant_manager.Endpoints
             app.MapGet("/api/care-actions", async (ApplicationDbContext db) =>
             {
                 var actions = await db.CareActions
-                    .OrderByDescending(action => action.IsEnabled)
-                    .ThenBy(action => action.Name)
+                    .OrderBy(action => action.Name)
                     .Select(action => CareActionDto.FromCareAction(action))
                     .ToListAsync();
 
@@ -36,8 +35,7 @@ namespace plant_manager.Endpoints
                 var action = new CareAction
                 {
                     Name = name,
-                    Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
-                    IsEnabled = request.IsEnabled
+                    Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim()
                 };
 
                 db.CareActions.Add(action);
@@ -69,7 +67,6 @@ namespace plant_manager.Endpoints
 
                 action.Name = name;
                 action.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
-                action.IsEnabled = request.IsEnabled;
 
                 await db.SaveChangesAsync();
 
@@ -87,9 +84,7 @@ namespace plant_manager.Endpoints
                 var hasLogs = await db.ActionLogs.AnyAsync(log => log.CareActionId == id);
                 if (hasLogs)
                 {
-                    action.IsEnabled = false;
-                    await db.SaveChangesAsync();
-                    return Results.Conflict(new { error = "Action has care history, so it was disabled instead of deleted." });
+                    return Results.Conflict(new { error = "Action has care history." });
                 }
 
                 db.CareActions.Remove(action);

@@ -14,7 +14,7 @@ type ResourcesViewProps = {
   onCloseDetail: () => void;
   onDelete: (resource: ActionResource) => void;
   onEdit: (resource: ActionResource) => void;
-  onFieldChange: (field: keyof ResourceFormState, value: string | boolean) => void;
+  onFieldChange: (field: keyof ResourceFormState, value: string) => void;
   onNew: () => void;
   onOpenDetail: (resource: ActionResource) => void;
   onSave: () => void;
@@ -39,15 +39,13 @@ export function ResourcesView({
   onSave,
   resources,
 }: ResourcesViewProps) {
-  const enabledCount = resources.filter((resource) => resource.isEnabled).length;
-
   return (
     <>
       <section className="summary-panel" aria-labelledby="resources-summary-heading">
         <div>
           <p className="eyebrow">Resource library</p>
           <h2 id="resources-summary-heading">
-            {isLoading ? 'Loading resources' : `${enabledCount} resources enabled`}
+            {isLoading ? 'Loading resources' : `${resources.length} resources`}
           </h2>
           <p>{error ?? 'Configure materials, products, tools, and containers used during care.'}</p>
         </div>
@@ -75,16 +73,8 @@ export function ResourcesView({
           </div>
           <div className="plant-detail-meta">
             <div>
-              <span>Category</span>
-              <strong>{selectedResource.category ?? 'Uncategorized'}</strong>
-            </div>
-            <div>
               <span>Notes</span>
               <strong>{selectedResource.notes ?? 'No notes'}</strong>
-            </div>
-            <div>
-              <span>Status</span>
-              <strong>{selectedResource.isEnabled ? 'Enabled' : 'Disabled'}</strong>
             </div>
           </div>
         </section>
@@ -111,26 +101,11 @@ export function ResourcesView({
             />
           </label>
           <label>
-            Category
-            <input
-              value={form.category}
-              onChange={(event) => onFieldChange('category', event.target.value)}
-            />
-          </label>
-          <label>
             Notes
             <input
               value={form.notes}
               onChange={(event) => onFieldChange('notes', event.target.value)}
             />
-          </label>
-          <label className="toggle-field">
-            <input
-              checked={form.isEnabled}
-              type="checkbox"
-              onChange={(event) => onFieldChange('isEnabled', event.target.checked)}
-            />
-            Enabled
           </label>
         </div>
 
@@ -161,11 +136,7 @@ export function ResourcesView({
               <div>
                 <h3>{resource.name}</h3>
                 <p>
-                  {resource.category ?? 'Uncategorized'}
-                  {' - '}
                   {resource.notes ?? 'No notes'}
-                  {' - '}
-                  {resource.isEnabled ? 'Enabled' : 'Disabled'}
                 </p>
               </div>
               <div className="row-actions">

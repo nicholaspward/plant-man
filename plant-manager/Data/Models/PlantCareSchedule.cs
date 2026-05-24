@@ -15,7 +15,6 @@ namespace plant_manager.Data.Models
         public string EndsMode { get; set; } = "after";
         public DateOnly? EndsOn { get; set; }
         public int? EndsAfterOccurrences { get; set; }
-        public bool IsEnabled { get; set; } = true;
 
         public Plant Plant { get; set; } = null!;
         public CareAction CareAction { get; set; } = null!;

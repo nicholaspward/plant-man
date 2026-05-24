@@ -48,9 +48,6 @@ export function PlantManagementView({
   onSetLocation,
   onSetTaxon,
 }: PlantManagementViewProps) {
-  const enabledFlags = plantFlagDefinitions.filter((flag) => flag.isEnabled);
-  const enabledLocations = plantLocations.filter((location) =>
-    location.isEnabled || location.id === selectedPlant?.locationId);
   const selectedTaxon = plantTaxa.find((taxon) => taxon.id === selectedPlant?.taxonId);
   const selectedLocation = plantLocations.find((location) => location.id === selectedPlant?.locationId);
   const activeFlags = selectedPlant?.flags.filter((flag) => flag.resolvedOn === null) ?? [];
@@ -148,9 +145,9 @@ export function PlantManagementView({
                   onChange={(event) => onSetLocation(event.target.value)}
                 >
                   <option value="">No location</option>
-                  {enabledLocations.map((location) => (
+                  {plantLocations.map((location) => (
                     <option key={location.id} value={location.id}>
-                      {location.isEnabled ? location.name : `${location.name} (disabled)`}
+                      {location.name}
                     </option>
                   ))}
                 </select>
@@ -161,10 +158,6 @@ export function PlantManagementView({
                 <div>
                   <span>Location</span>
                   <strong>{selectedLocation.name}</strong>
-                </div>
-                <div>
-                  <span>Status</span>
-                  <strong>{selectedLocation.isEnabled ? 'Enabled' : 'Disabled'}</strong>
                 </div>
                 {selectedLocation.notes ? (
                   <div className="meta-wide">
@@ -202,7 +195,7 @@ export function PlantManagementView({
                   onChange={(event) => onFieldChange('plantFlagDefinitionId', event.target.value)}
                 >
                   <option value="">Select a flag</option>
-                  {enabledFlags.map((flag) => (
+                  {plantFlagDefinitions.map((flag) => (
                     <option key={flag.id} value={flag.id}>
                       {flag.name}
                     </option>

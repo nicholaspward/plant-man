@@ -11,8 +11,7 @@ namespace plant_manager.Endpoints
             app.MapGet("/api/plant-locations", async (ApplicationDbContext db) =>
             {
                 var locations = await db.PlantLocations
-                    .OrderByDescending(location => location.IsEnabled)
-                    .ThenBy(location => location.Name)
+                    .OrderBy(location => location.Name)
                     .Select(location => PlantLocationDto.FromLocation(location))
                     .ToListAsync();
 
@@ -36,8 +35,7 @@ namespace plant_manager.Endpoints
                 var location = new PlantLocation
                 {
                     Name = name,
-                    Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
-                    IsEnabled = request.IsEnabled
+                    Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
                 };
 
                 db.PlantLocations.Add(location);
@@ -69,7 +67,6 @@ namespace plant_manager.Endpoints
 
                 location.Name = name;
                 location.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
-                location.IsEnabled = request.IsEnabled;
 
                 await db.SaveChangesAsync();
 
@@ -87,9 +84,7 @@ namespace plant_manager.Endpoints
                 var isInUse = await db.Plants.AnyAsync(plant => plant.LocationId == id);
                 if (isInUse)
                 {
-                    location.IsEnabled = false;
-                    await db.SaveChangesAsync();
-                    return Results.Conflict(new { error = "Location is in use, so it was disabled instead of deleted." });
+                    return Results.Conflict(new { error = "Location is assigned to one or more plants." });
                 }
 
                 db.PlantLocations.Remove(location);
