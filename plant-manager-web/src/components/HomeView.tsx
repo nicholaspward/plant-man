@@ -241,21 +241,22 @@ function getTasksForDate(tasks: CareTask[], dateKey: string) {
 
   return tasks
     .filter((task) => {
-      if (!task.dueDate) {
+      const taskDateKey = getTaskDateKey(task);
+      if (!taskDateKey) {
         return false;
       }
 
       if (dateKey === todayKey) {
-        return task.dueDate <= todayKey;
+        return taskDateKey <= todayKey;
       }
 
-      return task.dueDate === dateKey;
+      return taskDateKey === dateKey;
     })
     .sort(compareCareTasks);
 }
 
 function compareCareTasks(left: CareTask, right: CareTask) {
-  const dueComparison = (left.dueDate ?? '').localeCompare(right.dueDate ?? '');
+  const dueComparison = (getTaskDateKey(left) ?? '').localeCompare(getTaskDateKey(right) ?? '');
   if (dueComparison !== 0) {
     return dueComparison;
   }
@@ -266,6 +267,35 @@ function compareCareTasks(left: CareTask, right: CareTask) {
   }
 
   return left.action.localeCompare(right.action);
+}
+
+function getTaskDateKey(task: CareTask) {
+  if (task.dueDate) {
+    return task.dueDate;
+  }
+
+  const today = new Date();
+  if (task.due === 'Today' || task.due === 'Yesterday' || task.due.endsWith(' days ago')) {
+    return getDateKey(today);
+  }
+
+  if (task.due === 'Tomorrow') {
+    return getOffsetDateKey(today, 1);
+  }
+
+  const relativeMatch = /^In (\d+) days$/.exec(task.due);
+  if (relativeMatch) {
+    return getOffsetDateKey(today, Number(relativeMatch[1]));
+  }
+
+  return null;
+}
+
+function getOffsetDateKey(date: Date, offsetDays: number) {
+  const nextDate = new Date(date);
+  nextDate.setDate(date.getDate() + offsetDays);
+
+  return getDateKey(nextDate);
 }
 
 function getDateKey(date: Date) {
