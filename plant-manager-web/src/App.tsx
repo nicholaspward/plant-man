@@ -957,7 +957,7 @@ export function App() {
       <header className="catalog-header">
         <div className="catalog-brand">
           <span className="catalog-logo">Plant-Man</span>
-          <span className="catalog-subtitle">Plant Care Supply</span>
+          <span className="catalog-subtitle">Plant care workbench</span>
         </div>
         <div className="catalog-contact">
           <strong>{plants.length}</strong>
@@ -967,7 +967,7 @@ export function App() {
 
       <div className="catalog-layout">
         <aside className="catalog-sidebar">
-          <h2>Concepts</h2>
+          <h2>Workbench</h2>
           <nav className="catalog-nav" aria-label="Primary navigation">
             <div className="nav-group">
               <h3>Operations</h3>
@@ -1297,7 +1297,7 @@ function getViewTitle(view: View) {
     case 'flags':
       return 'Plant Flags';
     default:
-      return 'Plant-Man';
+      return 'Dashboard';
   }
 }
 

@@ -350,6 +350,7 @@ namespace plant_manager
         int CareActivityId,
         int CareActionId,
         string Action,
+        string? DueDate,
         string Due,
         string Status)
     {
@@ -368,6 +369,7 @@ namespace plant_manager
                 schedule.CareActivityId,
                 schedule.CareActionId,
                 schedule.CareActivity.Name,
+                nextCare?.ToString("yyyy-MM-dd"),
                 PlantCareFormatter.FormatRelativeDate(nextCare, today, "Unscheduled"),
                 PlantCareFormatter.GetStatus(nextCare, today));
         }

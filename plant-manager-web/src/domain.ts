@@ -214,6 +214,7 @@ export type CareTask = {
   careActivityId: number;
   careActionId: number;
   action: string;
+  dueDate: string | null;
   due: string;
   status: CareStatus;
 };
