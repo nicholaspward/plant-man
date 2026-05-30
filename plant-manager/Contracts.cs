@@ -4,12 +4,14 @@ namespace plant_manager
 {
     public record CreatePlantRequest(
         string Nickname,
+        DateOnly? Birthday,
         int? TaxonId,
         int? LocationId,
         IReadOnlyList<SavePlantCareScheduleRequest>? CareSchedules);
 
     public record UpdatePlantRequest(
         string Nickname,
+        DateOnly? Birthday,
         int? TaxonId,
         int? LocationId,
         IReadOnlyList<SavePlantCareScheduleRequest>? CareSchedules);
@@ -51,6 +53,11 @@ namespace plant_manager
         string Name,
         string? Notes);
 
+    public record SavePlantGroupRequest(
+        string Name,
+        IReadOnlyList<int>? PlantIds,
+        string? Notes);
+
     public record SaveCareActionRequest(
         string Name,
         string? Description);
@@ -69,6 +76,20 @@ namespace plant_manager
         IReadOnlyList<SaveCareActivityActionResourceRequest>? Resources);
 
     public record SaveCareActivityActionResourceRequest(
+        int ActionResourceId,
+        decimal? Quantity,
+        string? Unit,
+        string? Notes);
+
+    public record SaveRecipeRequest(
+        string Name,
+        string Type,
+        string? MeasurementMode,
+        string? OutputResourceName,
+        IReadOnlyList<SaveRecipeComponentRequest>? Components,
+        string? Notes);
+
+    public record SaveRecipeComponentRequest(
         int ActionResourceId,
         decimal? Quantity,
         string? Unit,
@@ -179,6 +200,39 @@ namespace plant_manager
             new(location.Id, location.Name, location.Notes);
     }
 
+    public record PlantGroupSummaryDto(
+        int Id,
+        string Name)
+    {
+        public static PlantGroupSummaryDto FromMembership(PlantGroupMembership membership) =>
+            new(membership.PlantGroupId, membership.PlantGroup.Name);
+    }
+
+    public record PlantGroupMemberDto(
+        int Id,
+        string Nickname)
+    {
+        public static PlantGroupMemberDto FromMembership(PlantGroupMembership membership) =>
+            new(membership.PlantId, membership.Plant.Nickname);
+    }
+
+    public record PlantGroupDto(
+        int Id,
+        string Name,
+        IReadOnlyList<PlantGroupMemberDto> Plants,
+        string? Notes)
+    {
+        public static PlantGroupDto FromGroup(PlantGroup group) =>
+            new(
+                group.Id,
+                group.Name,
+                group.Memberships
+                    .OrderBy(membership => membership.Plant.Nickname)
+                    .Select(PlantGroupMemberDto.FromMembership)
+                    .ToList(),
+                group.Notes);
+    }
+
     public record CareActionDto(
         int Id,
         string Name,
@@ -191,10 +245,35 @@ namespace plant_manager
     public record ActionResourceDto(
         int Id,
         string Name,
-        string? Notes)
+        string? Notes,
+        RecipeSummaryDto? ProducedByRecipe)
     {
         public static ActionResourceDto FromActionResource(ActionResource resource) =>
-            new(resource.Id, resource.Name, resource.Notes);
+            new(
+                resource.Id,
+                resource.Name,
+                resource.Notes,
+                resource.ProducedByRecipe is null
+                    ? null
+                    : RecipeSummaryDto.FromRecipe(resource.ProducedByRecipe));
+    }
+
+    public record ActionResourceSummaryDto(
+        int Id,
+        string Name)
+    {
+        public static ActionResourceSummaryDto FromActionResource(ActionResource resource) =>
+            new(resource.Id, resource.Name);
+    }
+
+    public record RecipeSummaryDto(
+        int Id,
+        string Name,
+        string Type,
+        string MeasurementMode)
+    {
+        public static RecipeSummaryDto FromRecipe(Recipe recipe) =>
+            new(recipe.Id, recipe.Name, recipe.Type, recipe.MeasurementMode);
     }
 
     public record CareActivityDto(
@@ -218,9 +297,53 @@ namespace plant_manager
                 activity.Notes);
     }
 
+    public record RecipeComponentDto(
+        int ActionResourceId,
+        string Name,
+        decimal? Quantity,
+        string? Unit,
+        string? Notes,
+        int SortOrder)
+    {
+        public static RecipeComponentDto FromRecipeComponent(RecipeComponent component) =>
+            new(
+                component.ActionResourceId,
+                component.ActionResource.Name,
+                component.Quantity,
+                component.Unit,
+                component.Notes,
+                component.SortOrder);
+    }
+
+    public record RecipeDto(
+        int Id,
+        string Name,
+        string Type,
+        string MeasurementMode,
+        ActionResourceSummaryDto? OutputResource,
+        IReadOnlyList<RecipeComponentDto> Components,
+        string? Notes)
+    {
+        public static RecipeDto FromRecipe(Recipe recipe) =>
+            new(
+                recipe.Id,
+                recipe.Name,
+                recipe.Type,
+                recipe.MeasurementMode,
+                recipe.OutputResource is null
+                    ? null
+                    : ActionResourceSummaryDto.FromActionResource(recipe.OutputResource),
+                recipe.Components
+                    .OrderBy(component => component.SortOrder)
+                    .Select(RecipeComponentDto.FromRecipeComponent)
+                    .ToList(),
+                recipe.Notes);
+    }
+
     public record PlantDto(
         int Id,
         string Nickname,
+        DateOnly? Birthday,
         int? TaxonId,
         string Taxon,
         int? LocationId,
@@ -228,6 +351,8 @@ namespace plant_manager
         string NextCare,
         string Status,
         IReadOnlyList<PlantFlagDto> Flags,
+        IReadOnlyList<PlantGroupSummaryDto> Groups,
+        IReadOnlyList<ActionLogDto> ActionLogs,
         IReadOnlyList<PlantCareScheduleDto> CareSchedules)
     {
         public static PlantDto FromPlant(Plant plant)
@@ -256,6 +381,7 @@ namespace plant_manager
             return new PlantDto(
                 plant.Id,
                 plant.Nickname,
+                plant.Birthday,
                 plant.TaxonId,
                 plant.Taxon is null ? "Unassigned" : $"{plant.Taxon.Genus} {plant.Taxon.Species}",
                 plant.LocationId,
@@ -267,6 +393,15 @@ namespace plant_manager
                     .ThenByDescending(flag => flag.StartedOn)
                     .ThenBy(flag => flag.Definition.Name)
                     .Select(PlantFlagDto.FromPlantFlag)
+                    .ToList(),
+                plant.GroupMemberships
+                    .OrderBy(membership => membership.PlantGroup.Name)
+                    .Select(PlantGroupSummaryDto.FromMembership)
+                    .ToList(),
+                plant.ActionLogs
+                    .OrderByDescending(log => log.PerformedOn)
+                    .ThenByDescending(log => log.Id)
+                    .Select(ActionLogDto.FromActionLog)
                     .ToList(),
                 schedules);
         }

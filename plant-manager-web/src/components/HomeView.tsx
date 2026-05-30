@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { CalendarCheck, Plus } from 'lucide-react';
-import type { CareTask, Plant } from '../domain';
+import type { CareTask, Plant, PlantGroup } from '../domain';
 import { PlantCard } from './PlantCard';
 
 type HomeViewProps = {
   careTasks: CareTask[];
   dueCount: number;
   error: string | null;
+  groups: PlantGroup[];
   isLoading: boolean;
   plants: Plant[];
   onCompleteBulkTasks: (tasks: CareTask[]) => void;
@@ -19,6 +20,7 @@ export function HomeView({
   careTasks,
   dueCount,
   error,
+  groups,
   isLoading,
   plants,
   onCompleteBulkTasks,
@@ -31,6 +33,7 @@ export function HomeView({
   const [selectedDate, setSelectedDate] = useState(() => weekDays[0]?.dateKey ?? getDateKey(new Date()));
   const selectedDay = weekDays.find((day) => day.dateKey === selectedDate) ?? weekDays[0];
   const selectedTasks = getTasksForDate(careTasks, selectedDate);
+  const groupDueTaskGroups = getGroupDueTaskGroups(careTasks, groups);
 
   return (
     <>
@@ -136,6 +139,31 @@ export function HomeView({
             </>
           ) : null}
 
+          {groupDueTaskGroups.length > 0 ? (
+            <>
+              <p className="task-list-label">Group actions</p>
+              {groupDueTaskGroups.map((group) => (
+                <article className="task-row task-row-group" key={`${group.groupId}-${group.careActivityId}`}>
+                  <span className="status-dot due" />
+                  <div>
+                    <h3>{group.groupName} / {group.action}</h3>
+                    <p>
+                      {group.tasks.length} due - {formatPlantNames(group.tasks)}
+                    </p>
+                  </div>
+                  <button
+                    className="small-action"
+                    type="button"
+                    onClick={() => onCompleteBulkTasks(group.tasks)}
+                  >
+                    <CalendarCheck size={16} />
+                    Log group
+                  </button>
+                </article>
+              ))}
+            </>
+          ) : null}
+
           {careTasks.length > 0 ? (
             <>
               <p className="task-list-label">Individual tasks</p>
@@ -204,6 +232,20 @@ function groupDueTasks(tasks: CareTask[]) {
   }
 
   return [...groups.values()].sort((left, right) => left.action.localeCompare(right.action));
+}
+
+function getGroupDueTaskGroups(tasks: CareTask[], groups: PlantGroup[]) {
+  const dueTasks = tasks.filter((task) => task.status === 'due');
+
+  return groups.flatMap((group) => {
+    const groupPlantIds = new Set(group.plants.map((plant) => plant.id));
+    return groupDueTasks(dueTasks.filter((task) => groupPlantIds.has(task.plantId)))
+      .map((taskGroup) => ({
+        ...taskGroup,
+        groupId: group.id,
+        groupName: group.name,
+      }));
+  });
 }
 
 function formatPlantNames(tasks: CareTask[]) {

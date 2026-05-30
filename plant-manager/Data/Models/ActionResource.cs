@@ -9,5 +9,7 @@ namespace plant_manager.Data.Models
 
         public List<CareActivityActionResource> CareActivityActionResources { get; set; } = [];
         public List<ActionLogResource> ActionLogResources { get; set; } = [];
+        public List<RecipeComponent> RecipeComponents { get; set; } = [];
+        public Recipe? ProducedByRecipe { get; set; }
     }
 }

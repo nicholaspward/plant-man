@@ -1,12 +1,13 @@
 import { CalendarClock, Save, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import type { CareActivity, Plant } from '../domain';
+import type { CareActivity, Plant, PlantGroup } from '../domain';
 import type { BulkScheduleFormState } from '../form-state';
 
 type SchedulesViewProps = {
   activities: CareActivity[];
   error: string | null;
   form: BulkScheduleFormState;
+  groups: PlantGroup[];
   isLoading: boolean;
   isSaving: boolean;
   plants: Plant[];
@@ -38,6 +39,7 @@ export function SchedulesView({
   activities,
   error,
   form,
+  groups,
   isLoading,
   isSaving,
   plants,
@@ -46,12 +48,14 @@ export function SchedulesView({
   onSave,
 }: SchedulesViewProps) {
   const [plantQuery, setPlantQuery] = useState('');
+  const [selectedGroupId, setSelectedGroupId] = useState('');
   const visiblePlants = useMemo(
     () => filterPlants(plants, plantQuery),
     [plants, plantQuery],
   );
   const selectedPlantIds = new Set(form.plantIds);
   const selectedPlants = plants.filter((plant) => selectedPlantIds.has(String(plant.id)));
+  const selectedGroup = groups.find((group) => String(group.id) === selectedGroupId);
   const selectedActivity = activities.find((activity) => String(activity.id) === form.careActivityId);
   const preview = selectedActivity ? formatSchedulePreview(selectedActivity.name, form) : '';
   const allVisibleSelected = visiblePlants.length > 0 && visiblePlants.every((plant) => selectedPlantIds.has(String(plant.id)));
@@ -79,7 +83,7 @@ export function SchedulesView({
           </div>
           <div className="schedule-count">
             <CalendarClock size={16} />
-            <span>{selectedPlants.length} selected</span>
+            <span>{selectedGroup ? `${selectedGroup.name}: ${selectedPlants.length} plants` : `${selectedPlants.length} selected`}</span>
           </div>
         </div>
 
@@ -107,6 +111,27 @@ export function SchedulesView({
               value={form.scheduledFor}
               onChange={(event) => onFieldChange('scheduledFor', event.target.value)}
             />
+          </label>
+          <label>
+            Target group
+            <select
+              disabled={isSaving}
+              value={selectedGroupId}
+              onChange={(event) => {
+                const groupId = event.target.value;
+                const group = groups.find((item) => String(item.id) === groupId);
+                setSelectedGroupId(groupId);
+                setPlantQuery('');
+                onFieldChange('plantIds', group ? group.plants.map((plant) => String(plant.id)) : []);
+              }}
+            >
+              <option value="">Individual plants</option>
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name} ({group.plants.length})
+                </option>
+              ))}
+            </select>
           </label>
         </div>
 
@@ -247,12 +272,15 @@ export function SchedulesView({
                 className="text-button"
                 type="button"
                 disabled={isSaving}
-                onClick={() => onFieldChange(
-                  'plantIds',
-                  allVisibleSelected
-                    ? form.plantIds.filter((id) => !visiblePlants.some((plant) => String(plant.id) === id))
-                    : [...new Set([...form.plantIds, ...visiblePlants.map((plant) => String(plant.id))])],
-                )}
+                onClick={() => {
+                  setSelectedGroupId('');
+                  onFieldChange(
+                    'plantIds',
+                    allVisibleSelected
+                      ? form.plantIds.filter((id) => !visiblePlants.some((plant) => String(plant.id) === id))
+                      : [...new Set([...form.plantIds, ...visiblePlants.map((plant) => String(plant.id))])],
+                  );
+                }}
               >
                 {allVisibleSelected ? 'Clear visible' : 'Select visible'}
               </button>
@@ -291,6 +319,7 @@ export function SchedulesView({
                       const nextPlantIds = event.target.checked
                         ? [...form.plantIds, plantId]
                         : form.plantIds.filter((id) => id !== plantId);
+                      setSelectedGroupId('');
                       onFieldChange('plantIds', nextPlantIds);
                     }}
                   />
@@ -303,11 +332,27 @@ export function SchedulesView({
         </div>
 
         <div className="form-actions">
-          <button className="primary-action" type="button" disabled={isSaving || form.plantIds.length === 0 || !form.careActivityId} onClick={onSave}>
+          <button
+            className="primary-action"
+            type="button"
+            disabled={isSaving || form.plantIds.length === 0 || !form.careActivityId}
+            onClick={() => {
+              onSave();
+              setSelectedGroupId('');
+            }}
+          >
             <Save size={18} />
-            {isSaving ? 'Saving' : `Apply to ${form.plantIds.length} plants`}
+            {isSaving ? 'Saving' : selectedGroup ? `Apply to ${selectedGroup.name}` : `Apply to ${form.plantIds.length} plants`}
           </button>
-          <button className="text-button danger" type="button" disabled={isSaving || form.plantIds.length === 0 || !form.careActivityId} onClick={onRemove}>
+          <button
+            className="text-button danger"
+            type="button"
+            disabled={isSaving || form.plantIds.length === 0 || !form.careActivityId}
+            onClick={() => {
+              onRemove();
+              setSelectedGroupId('');
+            }}
+          >
             <Trash2 size={16} />
             Remove from {form.plantIds.length} plants
           </button>

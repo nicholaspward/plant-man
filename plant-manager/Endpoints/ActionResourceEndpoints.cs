@@ -11,6 +11,7 @@ namespace plant_manager.Endpoints
             app.MapGet("/api/action-resources", async (ApplicationDbContext db) =>
             {
                 var resources = await db.ActionResources
+                    .Include(resource => resource.ProducedByRecipe)
                     .OrderBy(resource => resource.Name)
                     .Select(resource => ActionResourceDto.FromActionResource(resource))
                     .ToListAsync();
@@ -82,7 +83,8 @@ namespace plant_manager.Endpoints
                 }
 
                 var isInUse = await db.ActionLogResources.AnyAsync(logResource => logResource.ActionResourceId == id)
-                    || await db.CareActivityActionResources.AnyAsync(activityResource => activityResource.ActionResourceId == id);
+                    || await db.CareActivityActionResources.AnyAsync(activityResource => activityResource.ActionResourceId == id)
+                    || await db.RecipeComponents.AnyAsync(component => component.ActionResourceId == id);
                 if (isInUse)
                 {
                     return Results.Conflict(new { error = "Resource is in use." });

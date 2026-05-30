@@ -76,6 +76,12 @@ export function ResourcesView({
               <span>Notes</span>
               <strong>{selectedResource.notes ?? 'No notes'}</strong>
             </div>
+            {selectedResource.producedByRecipe ? (
+              <div>
+                <span>Produced by recipe</span>
+                <strong>{selectedResource.producedByRecipe.name}</strong>
+              </div>
+            ) : null}
           </div>
         </section>
       ) : null}
@@ -136,7 +142,9 @@ export function ResourcesView({
               <div>
                 <h3>{resource.name}</h3>
                 <p>
-                  {resource.notes ?? 'No notes'}
+                  {resource.producedByRecipe
+                    ? `Produced by ${resource.producedByRecipe.name}`
+                    : resource.notes ?? 'No notes'}
                 </p>
               </div>
               <div className="row-actions">

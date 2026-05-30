@@ -25,8 +25,12 @@ namespace plant_manager.Endpoints
                     .ThenInclude(action => action.Resources)
                     .ThenInclude(resource => resource.ActionResource)
                     .Include(plant => plant.ActionLogs)
+                    .ThenInclude(log => log.Resources)
+                    .ThenInclude(resource => resource.ActionResource)
                     .Include(plant => plant.Flags)
                     .ThenInclude(flag => flag.Definition)
+                    .Include(plant => plant.GroupMemberships)
+                    .ThenInclude(membership => membership.PlantGroup)
                     .OrderBy(plant => plant.Nickname)
                     .ToListAsync();
 
@@ -50,8 +54,12 @@ namespace plant_manager.Endpoints
                     .ThenInclude(action => action.Resources)
                     .ThenInclude(resource => resource.ActionResource)
                     .Include(plant => plant.ActionLogs)
+                    .ThenInclude(log => log.Resources)
+                    .ThenInclude(resource => resource.ActionResource)
                     .Include(plant => plant.Flags)
                     .ThenInclude(flag => flag.Definition)
+                    .Include(plant => plant.GroupMemberships)
+                    .ThenInclude(membership => membership.PlantGroup)
                     .FirstOrDefaultAsync(item => item.Id == id);
 
                 return plant is null
@@ -81,6 +89,7 @@ namespace plant_manager.Endpoints
                 var plant = new Plant
                 {
                     Nickname = request.Nickname.Trim(),
+                    Birthday = request.Birthday,
                     TaxonId = request.TaxonId,
                     LocationId = request.LocationId
                 };
@@ -125,8 +134,12 @@ namespace plant_manager.Endpoints
                     .ThenInclude(action => action.Resources)
                     .ThenInclude(resource => resource.ActionResource)
                     .Include(item => item.ActionLogs)
+                    .ThenInclude(log => log.Resources)
+                    .ThenInclude(resource => resource.ActionResource)
                     .Include(item => item.Flags)
                     .ThenInclude(flag => flag.Definition)
+                    .Include(item => item.GroupMemberships)
+                    .ThenInclude(membership => membership.PlantGroup)
                     .FirstOrDefaultAsync(item => item.Id == id);
 
                 if (plant is null)
@@ -147,6 +160,7 @@ namespace plant_manager.Endpoints
                 }
 
                 plant.Nickname = request.Nickname.Trim();
+                plant.Birthday = request.Birthday;
                 plant.TaxonId = request.TaxonId;
                 plant.LocationId = request.LocationId;
                 plant.Taxon = taxon;

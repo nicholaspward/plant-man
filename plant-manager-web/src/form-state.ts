@@ -6,13 +6,18 @@ import type {
   CareAction,
   CareActionPayload,
   BulkPlantCareSchedulePayload,
+  Recipe,
+  RecipePayload,
   Plant,
   AssignPlantFlagPayload,
   PlantPayload,
   PlantFlagDefinition,
   PlantFlagDefinitionPayload,
+  PlantGroup,
+  PlantGroupPayload,
   PlantLocation,
   PlantLocationPayload,
+  RecipeMeasurementMode,
   ScheduleEndsMode,
   ScheduleRecurrenceMode,
   ScheduleRepeatUnit,
@@ -22,6 +27,7 @@ import type {
 
 export const emptyPlantForm = {
   nickname: '',
+  birthday: '',
 };
 
 export const emptyTaxonForm = {
@@ -35,6 +41,12 @@ export const emptyTaxonForm = {
 
 export const emptyLocationForm = {
   name: '',
+  notes: '',
+};
+
+export const emptyPlantGroupForm = {
+  name: '',
+  plantIds: [] as string[],
   notes: '',
 };
 
@@ -54,6 +66,15 @@ export const emptyActivityForm = {
   notes: '',
 };
 
+export const emptyRecipeForm = {
+  name: '',
+  type: 'Soil mixture',
+  measurementMode: 'quantity' as RecipeMeasurementMode,
+  outputResourceName: '',
+  components: [] as RecipeComponentFormState[],
+  notes: '',
+};
+
 export type CareActivityActionResourceFormState = {
   actionResourceId: string;
   quantity: string;
@@ -64,6 +85,13 @@ export type CareActivityActionResourceFormState = {
 export type CareActivityActionFormState = {
   careActionId: string;
   resources: CareActivityActionResourceFormState[];
+};
+
+export type RecipeComponentFormState = {
+  actionResourceId: string;
+  quantity: string;
+  unit: string;
+  notes: string;
 };
 
 export const emptyFlagDefinitionForm = {
@@ -94,23 +122,27 @@ export const emptyBulkScheduleForm = {
 export type PlantFormState = typeof emptyPlantForm;
 export type TaxonFormState = typeof emptyTaxonForm;
 export type LocationFormState = typeof emptyLocationForm;
+export type PlantGroupFormState = typeof emptyPlantGroupForm;
 export type ActionFormState = typeof emptyActionForm;
 export type ResourceFormState = typeof emptyResourceForm;
 export type ActivityFormState = typeof emptyActivityForm;
+export type RecipeFormState = typeof emptyRecipeForm;
 export type FlagDefinitionFormState = typeof emptyFlagDefinitionForm;
 export type PlantFlagFormState = typeof emptyPlantFlagForm;
 export type BulkScheduleFormState = typeof emptyBulkScheduleForm;
-export type View = 'home' | 'plants' | 'plant-management' | 'schedules' | 'taxa' | 'locations' | 'actions' | 'resources' | 'activities' | 'flags';
+export type View = 'home' | 'plants' | 'plant-management' | 'schedules' | 'taxa' | 'locations' | 'groups' | 'actions' | 'resources' | 'recipes' | 'activities' | 'flags';
 
 export function toPlantForm(plant: Plant): PlantFormState {
   return {
     nickname: plant.nickname,
+    birthday: plant.birthday ?? '',
   };
 }
 
 export function toPlantPayload(form: PlantFormState): PlantPayload {
   return {
     nickname: form.nickname.trim(),
+    birthday: form.birthday || null,
     taxonId: null,
     locationId: null,
     careSchedules: null,
@@ -127,6 +159,22 @@ export function toLocationForm(location: PlantLocation): LocationFormState {
 export function toLocationPayload(form: LocationFormState): PlantLocationPayload {
   return {
     name: form.name.trim(),
+    notes: form.notes.trim() || null,
+  };
+}
+
+export function toPlantGroupForm(group: PlantGroup): PlantGroupFormState {
+  return {
+    name: group.name,
+    plantIds: group.plants.map((plant) => String(plant.id)),
+    notes: group.notes ?? '',
+  };
+}
+
+export function toPlantGroupPayload(form: PlantGroupFormState): PlantGroupPayload {
+  return {
+    name: form.name.trim(),
+    plantIds: form.plantIds.map((id) => Number(id)),
     notes: form.notes.trim() || null,
   };
 }
@@ -208,6 +256,38 @@ export function toActivityPayload(form: ActivityFormState): CareActivityPayload 
         unit: resource.unit.trim() || null,
         notes: resource.notes.trim() || null,
       })),
+    })),
+    notes: form.notes.trim() || null,
+  };
+}
+
+export function toRecipeForm(recipe: Recipe): RecipeFormState {
+  return {
+    name: recipe.name,
+    type: recipe.type,
+    measurementMode: recipe.measurementMode,
+    outputResourceName: recipe.outputResource?.name ?? '',
+    components: recipe.components.map((component) => ({
+      actionResourceId: String(component.actionResourceId),
+      quantity: component.quantity === null ? '' : String(component.quantity),
+      unit: component.unit ?? '',
+      notes: component.notes ?? '',
+    })),
+    notes: recipe.notes ?? '',
+  };
+}
+
+export function toRecipePayload(form: RecipeFormState): RecipePayload {
+  return {
+    name: form.name.trim(),
+    type: form.type.trim(),
+    measurementMode: form.measurementMode,
+    outputResourceName: form.outputResourceName.trim() || null,
+    components: form.components.map((component) => ({
+      actionResourceId: Number(component.actionResourceId),
+      quantity: component.quantity.trim() ? Number(component.quantity) : null,
+      unit: form.measurementMode === 'quantity' ? component.unit.trim() || null : '%',
+      notes: component.notes.trim() || null,
     })),
     notes: form.notes.trim() || null,
   };

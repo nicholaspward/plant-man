@@ -30,6 +30,15 @@ export function PlantCard({ plant, onOpen }: PlantCardProps) {
               ))}
           </div>
         ) : null}
+        {plant.groups.length > 0 ? (
+          <div className="flag-list">
+            {plant.groups.map((group) => (
+              <span className="flag-chip group-chip" key={group.id}>
+                {group.name}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
       <dl>
         <div>

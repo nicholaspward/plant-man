@@ -8,12 +8,16 @@ import type {
   BulkCompleteCareTasksPayload,
   CareTask,
   BulkPlantCareSchedulePayload,
+  Recipe,
+  RecipePayload,
   Plant,
   AssignPlantFlagPayload,
   PlantPayload,
   PlantFlag,
   PlantFlagDefinition,
   PlantFlagDefinitionPayload,
+  PlantGroup,
+  PlantGroupPayload,
   PlantLocation,
   PlantLocationPayload,
   PlantTaxon,
@@ -70,6 +74,30 @@ export async function updatePlantLocation(id: number, payload: PlantLocationPayl
 
 export async function deletePlantLocation(id: number) {
   return request<void>(`/api/plant-locations/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function getPlantGroups() {
+  return request<PlantGroup[]>('/api/plant-groups');
+}
+
+export async function createPlantGroup(payload: PlantGroupPayload) {
+  return request<PlantGroup>('/api/plant-groups', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updatePlantGroup(id: number, payload: PlantGroupPayload) {
+  return request<PlantGroup>(`/api/plant-groups/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deletePlantGroup(id: number) {
+  return request<void>(`/api/plant-groups/${id}`, {
     method: 'DELETE',
   });
 }
@@ -138,6 +166,30 @@ export async function updateActionResource(id: number, payload: ActionResourcePa
 
 export async function deleteActionResource(id: number) {
   return request<void>(`/api/action-resources/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function getRecipes() {
+  return request<Recipe[]>('/api/recipes');
+}
+
+export async function createRecipe(payload: RecipePayload) {
+  return request<Recipe>('/api/recipes', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateRecipe(id: number, payload: RecipePayload) {
+  return request<Recipe>(`/api/recipes/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteRecipe(id: number) {
+  return request<void>(`/api/recipes/${id}`, {
     method: 'DELETE',
   });
 }

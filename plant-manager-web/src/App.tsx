@@ -4,7 +4,9 @@ import {
   createCareActivity,
   createCareAction,
   createPlant,
+  createPlantGroup,
   createPlantLocation,
+  createRecipe,
   assignPlantFlag,
   completeCareTasksBulk,
   createPlantFlag,
@@ -13,17 +15,21 @@ import {
   deleteCareActivity,
   deleteCareAction,
   deletePlant,
+  deletePlantGroup,
   deletePlantFlag,
   deletePlantLocation,
   deletePlantTaxon,
+  deleteRecipe,
   getActionResources,
   getCareActivities,
   getCareActions,
   getCareTasks,
   getPlants,
   getPlantFlags,
+  getPlantGroups,
   getPlantLocations,
   getPlantTaxa,
+  getRecipes,
   removePlantFlagAssignment,
   removePlantCareSchedulesBulk,
   resolvePlantFlag,
@@ -32,21 +38,25 @@ import {
   updateCareActivity,
   updateCareAction,
   updatePlant,
+  updatePlantGroup,
   updatePlantFlag,
   updatePlantLocation,
   updatePlantTaxon,
+  updateRecipe,
 } from './api';
 import { ActionsView } from './components/ActionsView';
 import { ActivitiesView } from './components/ActivitiesView';
 import { FlagsView } from './components/FlagsView';
+import { GroupsView } from './components/GroupsView';
 import { HomeView } from './components/HomeView';
 import { LocationsView } from './components/LocationsView';
 import { PlantManagementView } from './components/PlantManagementView';
 import { PlantsView } from './components/PlantsView';
+import { RecipesView } from './components/RecipesView';
 import { ResourcesView } from './components/ResourcesView';
 import { SchedulesView } from './components/SchedulesView';
 import { TaxaView } from './components/TaxaView';
-import type { ActionResource, CareActivity, CareAction, CareTask, Plant, PlantFlag, PlantFlagDefinition, PlantLocation, PlantTaxon } from './domain';
+import type { ActionResource, CareActivity, CareAction, CareTask, Plant, PlantFlag, PlantFlagDefinition, PlantGroup, PlantLocation, PlantTaxon, Recipe } from './domain';
 import {
   emptyActionForm,
   emptyActivityForm,
@@ -54,7 +64,9 @@ import {
   emptyFlagDefinitionForm,
   emptyLocationForm,
   emptyPlantForm,
+  emptyPlantGroupForm,
   emptyPlantFlagForm,
+  emptyRecipeForm,
   emptyResourceForm,
   emptyTaxonForm,
   toActionForm,
@@ -66,9 +78,13 @@ import {
   toFlagDefinitionPayload,
   toLocationForm,
   toLocationPayload,
+  toPlantGroupForm,
+  toPlantGroupPayload,
   toPlantFlagPayload,
   toPlantForm,
   toPlantPayload,
+  toRecipeForm,
+  toRecipePayload,
   toResourceForm,
   toResourcePayload,
   toTaxonForm,
@@ -78,8 +94,10 @@ import {
   type BulkScheduleFormState,
   type FlagDefinitionFormState,
   type LocationFormState,
+  type PlantGroupFormState,
   type PlantFlagFormState,
   type PlantFormState,
+  type RecipeFormState,
   type ResourceFormState,
   type TaxonFormState,
   type View,
@@ -90,8 +108,10 @@ export function App() {
   const [plants, setPlants] = useState<Plant[]>([]);
   const [plantTaxa, setPlantTaxa] = useState<PlantTaxon[]>([]);
   const [plantLocations, setPlantLocations] = useState<PlantLocation[]>([]);
+  const [plantGroups, setPlantGroups] = useState<PlantGroup[]>([]);
   const [careActions, setCareActions] = useState<CareAction[]>([]);
   const [actionResources, setActionResources] = useState<ActionResource[]>([]);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [careActivities, setCareActivities] = useState<CareActivity[]>([]);
   const [plantFlagDefinitions, setPlantFlagDefinitions] = useState<PlantFlagDefinition[]>([]);
   const [careTasks, setCareTasks] = useState<CareTask[]>([]);
@@ -100,15 +120,19 @@ export function App() {
   const [editingPlantId, setEditingPlantId] = useState<number | null>(null);
   const [editingTaxonId, setEditingTaxonId] = useState<number | null>(null);
   const [editingLocationId, setEditingLocationId] = useState<number | null>(null);
+  const [editingPlantGroupId, setEditingPlantGroupId] = useState<number | null>(null);
   const [editingActionId, setEditingActionId] = useState<number | null>(null);
   const [editingResourceId, setEditingResourceId] = useState<number | null>(null);
+  const [editingRecipeId, setEditingRecipeId] = useState<number | null>(null);
   const [editingActivityId, setEditingActivityId] = useState<number | null>(null);
   const [editingFlagDefinitionId, setEditingFlagDefinitionId] = useState<number | null>(null);
   const [isPlantEditorOpen, setIsPlantEditorOpen] = useState(false);
   const [isTaxonEditorOpen, setIsTaxonEditorOpen] = useState(false);
   const [isLocationEditorOpen, setIsLocationEditorOpen] = useState(false);
+  const [isPlantGroupEditorOpen, setIsPlantGroupEditorOpen] = useState(false);
   const [isActionEditorOpen, setIsActionEditorOpen] = useState(false);
   const [isResourceEditorOpen, setIsResourceEditorOpen] = useState(false);
+  const [isRecipeEditorOpen, setIsRecipeEditorOpen] = useState(false);
   const [isActivityEditorOpen, setIsActivityEditorOpen] = useState(false);
   const [isFlagDefinitionEditorOpen, setIsFlagDefinitionEditorOpen] = useState(false);
   const [selectedPlantId, setSelectedPlantId] = useState<number | null>(null);
@@ -116,13 +140,16 @@ export function App() {
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(null);
   const [selectedActionId, setSelectedActionId] = useState<number | null>(null);
   const [selectedResourceId, setSelectedResourceId] = useState<number | null>(null);
+  const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null);
   const [selectedActivityId, setSelectedActivityId] = useState<number | null>(null);
   const [selectedFlagDefinitionId, setSelectedFlagDefinitionId] = useState<number | null>(null);
   const [form, setForm] = useState<PlantFormState>(emptyPlantForm);
   const [taxonForm, setTaxonForm] = useState<TaxonFormState>(emptyTaxonForm);
   const [locationForm, setLocationForm] = useState<LocationFormState>(emptyLocationForm);
+  const [plantGroupForm, setPlantGroupForm] = useState<PlantGroupFormState>(emptyPlantGroupForm);
   const [actionForm, setActionForm] = useState<ActionFormState>(emptyActionForm);
   const [resourceForm, setResourceForm] = useState<ResourceFormState>(emptyResourceForm);
+  const [recipeForm, setRecipeForm] = useState<RecipeFormState>(emptyRecipeForm);
   const [activityForm, setActivityForm] = useState<ActivityFormState>(emptyActivityForm);
   const [flagDefinitionForm, setFlagDefinitionForm] = useState<FlagDefinitionFormState>(emptyFlagDefinitionForm);
   const [plantFlagForm, setPlantFlagForm] = useState<PlantFlagFormState>(emptyPlantFlagForm);
@@ -136,8 +163,10 @@ export function App() {
         tasksResponse,
         taxaResponse,
         locationsResponse,
+        groupsResponse,
         actionsResponse,
         resourcesResponse,
+        recipesResponse,
         activitiesResponse,
         flagsResponse,
       ] = await Promise.all([
@@ -145,8 +174,10 @@ export function App() {
         getCareTasks(),
         getPlantTaxa(),
         getPlantLocations(),
+        getPlantGroups(),
         getCareActions(),
         getActionResources(),
+        getRecipes(),
         getCareActivities(),
         getPlantFlags(),
       ]);
@@ -156,8 +187,10 @@ export function App() {
       setCareTasks(tasksResponse);
       setPlantTaxa(taxaResponse);
       setPlantLocations(locationsResponse);
+      setPlantGroups(groupsResponse);
       setCareActions(actionsResponse);
       setActionResources(resourcesResponse);
+      setRecipes(recipesResponse);
       setCareActivities(activitiesResponse);
       setPlantFlagDefinitions(flagsResponse);
     } catch {
@@ -172,6 +205,17 @@ export function App() {
 
     setError(null);
     setPlantLocations(locationsResponse);
+  }
+
+  async function loadGroupsAndPlants() {
+    const [groupsResponse, plantsResponse] = await Promise.all([
+      getPlantGroups(),
+      getPlants(),
+    ]);
+
+    setError(null);
+    setPlantGroups(groupsResponse);
+    setPlants(plantsResponse);
   }
 
   async function loadPlants() {
@@ -220,12 +264,14 @@ export function App() {
       tasksResponse,
       actionsResponse,
       resourcesResponse,
+      recipesResponse,
       activitiesResponse,
     ] = await Promise.all([
       getPlants(),
       getCareTasks(),
       getCareActions(),
       getActionResources(),
+      getRecipes(),
       getCareActivities(),
     ]);
 
@@ -234,7 +280,19 @@ export function App() {
     setCareTasks(tasksResponse);
     setCareActions(actionsResponse);
     setActionResources(resourcesResponse);
+    setRecipes(recipesResponse);
     setCareActivities(activitiesResponse);
+  }
+
+  async function loadRecipesAndResources() {
+    const [recipesResponse, resourcesResponse] = await Promise.all([
+      getRecipes(),
+      getActionResources(),
+    ]);
+
+    setError(null);
+    setRecipes(recipesResponse);
+    setActionResources(resourcesResponse);
   }
 
   useEffect(() => {
@@ -254,10 +312,13 @@ export function App() {
   const selectedTaxon = plantTaxa.find((taxon) => taxon.id === selectedTaxonId);
   const activeLocation = plantLocations.find((location) => location.id === editingLocationId);
   const selectedLocation = plantLocations.find((location) => location.id === selectedLocationId);
+  const activePlantGroup = plantGroups.find((group) => group.id === editingPlantGroupId);
   const activeAction = careActions.find((action) => action.id === editingActionId);
   const selectedAction = careActions.find((action) => action.id === selectedActionId);
   const activeResource = actionResources.find((resource) => resource.id === editingResourceId);
   const selectedResource = actionResources.find((resource) => resource.id === selectedResourceId);
+  const activeRecipe = recipes.find((recipe) => recipe.id === editingRecipeId);
+  const selectedRecipe = recipes.find((recipe) => recipe.id === selectedRecipeId);
   const activeActivity = careActivities.find((activity) => activity.id === editingActivityId);
   const selectedActivity = careActivities.find((activity) => activity.id === selectedActivityId);
   const activeFlagDefinition = plantFlagDefinitions.find((flag) => flag.id === editingFlagDefinitionId);
@@ -275,6 +336,10 @@ export function App() {
     setLocationForm((current) => ({ ...current, [field]: value }));
   }
 
+  function updatePlantGroupForm(field: keyof PlantGroupFormState, value: string | string[]) {
+    setPlantGroupForm((current) => ({ ...current, [field]: value }));
+  }
+
   function updateActionForm(field: keyof ActionFormState, value: string) {
     setActionForm((current) => ({ ...current, [field]: value }));
   }
@@ -285,6 +350,10 @@ export function App() {
 
   function updateActivityForm(field: keyof ActivityFormState, value: ActivityFormState[keyof ActivityFormState]) {
     setActivityForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateRecipeForm(field: keyof RecipeFormState, value: RecipeFormState[keyof RecipeFormState]) {
+    setRecipeForm((current) => ({ ...current, [field]: value }));
   }
 
   function updateFlagDefinitionForm(field: keyof FlagDefinitionFormState, value: string) {
@@ -304,6 +373,7 @@ export function App() {
 
   function startAddingPlant() {
     setEditingPlantId(null);
+    setSelectedPlantId(null);
     setForm(emptyPlantForm);
     setIsPlantEditorOpen(true);
     setView('plants');
@@ -329,6 +399,14 @@ export function App() {
     setEditingPlantId(null);
     setForm(emptyPlantForm);
     setIsPlantEditorOpen(false);
+  }
+
+  function openPlantReadOnlyDetail(plant: Plant) {
+    setSelectedPlantId(plant.id);
+    setEditingPlantId(null);
+    setForm(emptyPlantForm);
+    setIsPlantEditorOpen(false);
+    setView('plants');
   }
 
   function startAddingTaxon() {
@@ -375,6 +453,26 @@ export function App() {
     setIsLocationEditorOpen(false);
   }
 
+  function startAddingPlantGroup() {
+    setEditingPlantGroupId(null);
+    setPlantGroupForm(emptyPlantGroupForm);
+    setIsPlantGroupEditorOpen(true);
+    setView('groups');
+  }
+
+  function startEditingPlantGroup(group: PlantGroup) {
+    setEditingPlantGroupId(group.id);
+    setPlantGroupForm(toPlantGroupForm(group));
+    setIsPlantGroupEditorOpen(true);
+    setView('groups');
+  }
+
+  function cancelEditingPlantGroup() {
+    setEditingPlantGroupId(null);
+    setPlantGroupForm(emptyPlantGroupForm);
+    setIsPlantGroupEditorOpen(false);
+  }
+
   function startAddingAction() {
     setEditingActionId(null);
     setSelectedActionId(null);
@@ -417,6 +515,28 @@ export function App() {
     setEditingResourceId(null);
     setResourceForm(emptyResourceForm);
     setIsResourceEditorOpen(false);
+  }
+
+  function startAddingRecipe() {
+    setEditingRecipeId(null);
+    setSelectedRecipeId(null);
+    setRecipeForm(emptyRecipeForm);
+    setIsRecipeEditorOpen(true);
+    setView('recipes');
+  }
+
+  function startEditingRecipe(recipe: Recipe) {
+    setSelectedRecipeId(null);
+    setEditingRecipeId(recipe.id);
+    setRecipeForm(toRecipeForm(recipe));
+    setIsRecipeEditorOpen(true);
+    setView('recipes');
+  }
+
+  function cancelEditingRecipe() {
+    setEditingRecipeId(null);
+    setRecipeForm(emptyRecipeForm);
+    setIsRecipeEditorOpen(false);
   }
 
   function startAddingActivity() {
@@ -504,6 +624,7 @@ export function App() {
     try {
       await updatePlant(selectedPlant.id, {
         nickname: selectedPlant.nickname,
+        birthday: selectedPlant.birthday,
         taxonId: nextValues.taxonId === undefined ? selectedPlant.taxonId : nextValues.taxonId,
         locationId: nextValues.locationId === undefined ? selectedPlant.locationId : nextValues.locationId,
         careSchedules: null,
@@ -639,6 +760,49 @@ export function App() {
     }
   }
 
+  async function savePlantGroup() {
+    if (!plantGroupForm.name.trim()) {
+      setError('Group name is required.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const payload = toPlantGroupPayload(plantGroupForm);
+      if (editingPlantGroupId === null) {
+        await createPlantGroup(payload);
+      } else {
+        await updatePlantGroup(editingPlantGroupId, payload);
+      }
+      cancelEditingPlantGroup();
+      await loadGroupsAndPlants();
+    } catch {
+      setError('Could not save the plant group.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function removePlantGroup(group: PlantGroup) {
+    const confirmed = window.confirm(`Delete ${group.name}?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await deletePlantGroup(group.id);
+      if (editingPlantGroupId === group.id) {
+        cancelEditingPlantGroup();
+      }
+      await loadGroupsAndPlants();
+    } catch {
+      setError('Could not delete the plant group.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function saveAction() {
     if (!actionForm.name.trim()) {
       setError('Action name is required.');
@@ -699,6 +863,7 @@ export function App() {
       }
       cancelEditingResource();
       await loadCareModel();
+      await loadRecipesAndResources();
     } catch {
       setError('Could not save the resource.');
     } finally {
@@ -719,8 +884,55 @@ export function App() {
         cancelEditingResource();
       }
       await loadCareModel();
+      await loadRecipesAndResources();
     } catch {
       setError('Could not delete the resource.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function saveRecipe() {
+    if (!recipeForm.name.trim() || !recipeForm.type.trim() || !recipeForm.outputResourceName.trim() || recipeForm.components.length === 0) {
+      setError('Recipe name, type, produced resource, and at least one component are required.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const payload = toRecipePayload(recipeForm);
+      if (editingRecipeId === null) {
+        await createRecipe(payload);
+      } else {
+        await updateRecipe(editingRecipeId, payload);
+      }
+      cancelEditingRecipe();
+      await loadRecipesAndResources();
+    } catch {
+      setError('Could not save the recipe.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function removeRecipe(recipe: Recipe) {
+    const confirmed = window.confirm(`Delete ${recipe.name}?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await deleteRecipe(recipe.id);
+      if (selectedRecipeId === recipe.id) {
+        setSelectedRecipeId(null);
+      }
+      if (editingRecipeId === recipe.id) {
+        cancelEditingRecipe();
+      }
+      await loadRecipesAndResources();
+    } catch {
+      setError('Could not delete the recipe.');
     } finally {
       setIsSaving(false);
     }
@@ -1010,13 +1222,6 @@ export function App() {
               >
                 Care Activities
               </button>
-              <button
-                type="button"
-                aria-current={view === 'actions' ? 'page' : undefined}
-                onClick={() => setView('actions')}
-              >
-                Care Actions
-              </button>
             </div>
 
             <div className="nav-group">
@@ -1037,10 +1242,31 @@ export function App() {
               </button>
               <button
                 type="button"
+                aria-current={view === 'groups' ? 'page' : undefined}
+                onClick={() => setView('groups')}
+              >
+                Groups
+              </button>
+              <button
+                type="button"
                 aria-current={view === 'resources' ? 'page' : undefined}
                 onClick={() => setView('resources')}
               >
                 Resources
+              </button>
+              <button
+                type="button"
+                aria-current={view === 'recipes' ? 'page' : undefined}
+                onClick={() => setView('recipes')}
+              >
+                Recipes
+              </button>
+              <button
+                type="button"
+                aria-current={view === 'actions' ? 'page' : undefined}
+                onClick={() => setView('actions')}
+              >
+                Actions
               </button>
               <button
                 type="button"
@@ -1056,9 +1282,11 @@ export function App() {
             <h3>Catalog Status</h3>
             <p>{dueCount} due</p>
             <p>{plantLocations.length} locations</p>
+            <p>{plantGroups.length} groups</p>
             <p>{careActivities.length} activities</p>
             <p>{careActions.length} actions</p>
             <p>{actionResources.length} resources</p>
+            <p>{recipes.length} recipes</p>
             <p>{plantFlagDefinitions.length} flags</p>
           </section>
         </aside>
@@ -1079,11 +1307,14 @@ export function App() {
                 isPlantEditorOpen={isPlantEditorOpen}
                 isSaving={isSaving}
                 plants={plants}
+                selectedPlant={selectedPlant}
                 onCancel={cancelEditing}
+                onCloseDetail={() => setSelectedPlantId(null)}
                 onDelete={(plant) => void removePlant(plant)}
                 onEdit={startEditingPlant}
                 onFieldChange={updateForm}
                 onNew={startAddingPlant}
+                onOpenDetail={openPlantReadOnlyDetail}
                 onSave={() => void savePlant()}
               />
             ) : view === 'plant-management' ? (
@@ -1111,6 +1342,7 @@ export function App() {
                 activities={careActivities}
                 error={error}
                 form={bulkScheduleForm}
+                groups={plantGroups}
                 isLoading={isLoading}
                 isSaving={isSaving}
                 plants={plants}
@@ -1155,6 +1387,23 @@ export function App() {
                 onNew={startAddingLocation}
                 onOpenDetail={(location) => setSelectedLocationId(location.id)}
                 onSave={() => void saveLocation()}
+              />
+            ) : view === 'groups' ? (
+              <GroupsView
+                activeGroupName={activePlantGroup?.name}
+                error={error}
+                form={plantGroupForm}
+                groups={plantGroups}
+                isEditorOpen={isPlantGroupEditorOpen}
+                isLoading={isLoading}
+                isSaving={isSaving}
+                plants={plants}
+                onCancel={cancelEditingPlantGroup}
+                onDelete={(group) => void removePlantGroup(group)}
+                onEdit={startEditingPlantGroup}
+                onFieldChange={updatePlantGroupForm}
+                onNew={startAddingPlantGroup}
+                onSave={() => void savePlantGroup()}
               />
             ) : view === 'actions' ? (
               <ActionsView
@@ -1215,6 +1464,26 @@ export function App() {
                 onSave={() => void saveResource()}
                 resources={actionResources}
               />
+            ) : view === 'recipes' ? (
+              <RecipesView
+                activeRecipeName={activeRecipe?.name}
+                error={error}
+                form={recipeForm}
+                isEditorOpen={isRecipeEditorOpen}
+                isLoading={isLoading}
+                isSaving={isSaving}
+                recipes={recipes}
+                resources={actionResources}
+                selectedRecipe={selectedRecipe}
+                onCancel={cancelEditingRecipe}
+                onCloseDetail={() => setSelectedRecipeId(null)}
+                onDelete={(recipe) => void removeRecipe(recipe)}
+                onEdit={startEditingRecipe}
+                onFieldChange={updateRecipeForm}
+                onNew={startAddingRecipe}
+                onOpenDetail={(recipe) => setSelectedRecipeId(recipe.id)}
+                onSave={() => void saveRecipe()}
+              />
             ) : view === 'flags' ? (
               <FlagsView
                 activeFlagName={activeFlagDefinition?.name}
@@ -1239,6 +1508,7 @@ export function App() {
                 careTasks={careTasks}
                 dueCount={dueCount}
                 error={error}
+                groups={plantGroups}
                 isLoading={isLoading}
                 plants={plants}
                 onCompleteBulkTasks={(tasks) => void completeBulkTasks(tasks)}
@@ -1265,10 +1535,12 @@ function getViewEyebrow(view: View) {
       return 'Care';
     case 'taxa':
     case 'locations':
+    case 'groups':
     case 'resources':
+    case 'recipes':
+    case 'actions':
     case 'flags':
       return 'Catalogs';
-    case 'actions':
     case 'activities':
       return 'Care';
     default:
@@ -1288,12 +1560,16 @@ function getViewTitle(view: View) {
       return 'Plant Taxa';
     case 'locations':
       return 'Locations';
+    case 'groups':
+      return 'Groups';
     case 'actions':
-      return 'Care Actions';
+      return 'Actions';
     case 'activities':
       return 'Care Activities';
     case 'resources':
       return 'Resources';
+    case 'recipes':
+      return 'Recipes';
     case 'flags':
       return 'Plant Flags';
     default:

@@ -93,6 +93,19 @@ export function PlantManagementView({
 
       {selectedPlant ? (
         <div className="plant-detail-grid">
+          <section className="detail-section detail-section-wide" aria-labelledby="plant-management-life">
+            <div className="detail-section-heading">
+              <Check size={17} />
+              <h3 id="plant-management-life">Plant History</h3>
+            </div>
+            <div className="plant-detail-meta compact-meta">
+              <div>
+                <span>Birthday</span>
+                <strong>{selectedPlant.birthday ?? 'Not set'}</strong>
+              </div>
+            </div>
+          </section>
+
           <section className="detail-section" aria-labelledby="plant-management-taxa">
             <div className="detail-section-heading">
               <Tags size={17} />

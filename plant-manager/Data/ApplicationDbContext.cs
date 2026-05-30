@@ -18,6 +18,10 @@ namespace plant_manager.Data
         public DbSet<PlantCareSchedule> PlantCareSchedules { get; set; }
         public DbSet<PlantFlagDefinition> PlantFlagDefinitions { get; set; }
         public DbSet<PlantFlag> PlantFlags { get; set; }
+        public DbSet<Recipe> Recipes { get; set; }
+        public DbSet<RecipeComponent> RecipeComponents { get; set; }
+        public DbSet<PlantGroup> PlantGroups { get; set; }
+        public DbSet<PlantGroupMembership> PlantGroupMemberships { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -40,6 +44,7 @@ namespace plant_manager.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Nickname).HasMaxLength(120).IsRequired();
+                entity.Property(e => e.Birthday);
                 entity.HasOne(e => e.Taxon)
                     .WithMany()
                     .HasForeignKey(e => e.TaxonId)
@@ -209,6 +214,64 @@ namespace plant_manager.Data
                 entity.HasOne(e => e.Definition)
                     .WithMany(e => e.PlantFlags)
                     .HasForeignKey(e => e.PlantFlagDefinitionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<PlantGroup>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id)
+                      .ValueGeneratedOnAdd();
+                entity.Property(e => e.Name).HasMaxLength(120).IsRequired();
+                entity.Property(e => e.Notes).HasMaxLength(1000);
+                entity.HasIndex(e => e.Name).IsUnique();
+            });
+
+            modelBuilder.Entity<PlantGroupMembership>(entity =>
+            {
+                entity.HasKey(e => new { e.PlantId, e.PlantGroupId });
+                entity.HasOne(e => e.Plant)
+                    .WithMany(e => e.GroupMemberships)
+                    .HasForeignKey(e => e.PlantId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.PlantGroup)
+                    .WithMany(e => e.Memberships)
+                    .HasForeignKey(e => e.PlantGroupId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<Recipe>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id)
+                      .ValueGeneratedOnAdd();
+                entity.Property(e => e.Name).HasMaxLength(120).IsRequired();
+                entity.Property(e => e.Type).HasMaxLength(80).IsRequired();
+                entity.Property(e => e.MeasurementMode).HasMaxLength(40).IsRequired();
+                entity.Property(e => e.Notes).HasMaxLength(1000);
+                entity.HasIndex(e => e.Name).IsUnique();
+                entity.HasIndex(e => e.OutputResourceId).IsUnique();
+                entity.HasOne(e => e.OutputResource)
+                    .WithOne(e => e.ProducedByRecipe)
+                    .HasForeignKey<Recipe>(e => e.OutputResourceId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<RecipeComponent>(entity =>
+            {
+                entity.HasKey(e => new { e.RecipeId, e.ActionResourceId });
+                entity.Property(e => e.Quantity).HasPrecision(10, 2);
+                entity.Property(e => e.Unit).HasMaxLength(40);
+                entity.Property(e => e.Notes).HasMaxLength(1000);
+                entity.Property(e => e.SortOrder).IsRequired();
+                entity.HasIndex(e => new { e.RecipeId, e.SortOrder }).IsUnique();
+                entity.HasOne(e => e.Recipe)
+                    .WithMany(e => e.Components)
+                    .HasForeignKey(e => e.RecipeId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.ActionResource)
+                    .WithMany(e => e.RecipeComponents)
+                    .HasForeignKey(e => e.ActionResourceId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
         }
