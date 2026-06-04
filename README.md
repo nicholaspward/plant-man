@@ -19,11 +19,26 @@ The app currently lets you test the core loop:
 
 ## Requirements
 
-Host machine:
+This project is intended to run inside a VS Code Dev Container. Your local desktop can be a thin client.
 
-- Docker Desktop
+Recommended setup:
+
+- Windows VM: runs VS Code and connects to the development machine over Remote SSH.
+- Debian/Linux VM: hosts the repository, Docker, and the dev container.
+- Dev container: provides the app toolchain.
+
+With this setup, the Windows VM does not need Node.js, .NET, SQLite, or Docker installed locally. Those tools run on the remote Debian VM or inside the dev container.
+
+Windows VM:
+
 - Visual Studio Code
+- VS Code Remote SSH extension
 - VS Code Dev Containers extension
+
+Debian/Linux VM:
+
+- Docker Engine
+- SSH access from the Windows VM
 
 Provided inside the dev container:
 
@@ -33,7 +48,7 @@ Provided inside the dev container:
 
 ## Getting Started
 
-Open the repo in VS Code and run:
+From the Windows VM, connect to the Debian/Linux VM with VS Code Remote SSH. Open the repo on the remote machine, then run:
 
 ```text
 Dev Containers: Reopen in Container
