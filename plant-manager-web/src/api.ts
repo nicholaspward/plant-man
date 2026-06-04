@@ -46,6 +46,31 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+export async function downloadSpreadsheetExport() {
+  const response = await fetch(`${apiBaseUrl}/api/export/spreadsheet`);
+
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const encodedFileNameMatch = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+  const fileNameMatch = /filename="?([^";]+)"?/i.exec(disposition);
+  const fileName = encodedFileNameMatch
+    ? decodeURIComponent(encodedFileNameMatch[1])
+    : fileNameMatch?.[1] ?? 'plant-man-export.xlsx';
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = url;
+  link.download = fileName;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 export async function getPlants() {
   return request<Plant[]>('/api/plants');
 }

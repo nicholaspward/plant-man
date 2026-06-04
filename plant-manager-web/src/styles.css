@@ -345,6 +345,13 @@ p {
   font-size: 0.86rem;
 }
 
+.summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 8px;
+}
+
 .section,
 .editor-panel {
   display: grid;

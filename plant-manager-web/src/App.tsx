@@ -20,6 +20,7 @@ import {
   deletePlantLocation,
   deletePlantTaxon,
   deleteRecipe,
+  downloadSpreadsheetExport,
   getActionResources,
   getCareActivities,
   getCareActions,
@@ -117,6 +118,7 @@ export function App() {
   const [careTasks, setCareTasks] = useState<CareTask[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [editingPlantId, setEditingPlantId] = useState<number | null>(null);
   const [editingTaxonId, setEditingTaxonId] = useState<number | null>(null);
   const [editingLocationId, setEditingLocationId] = useState<number | null>(null);
@@ -670,6 +672,18 @@ export function App() {
       setError('Could not delete the plant.');
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function exportSpreadsheet() {
+    setIsExporting(true);
+    try {
+      setError(null);
+      await downloadSpreadsheetExport();
+    } catch {
+      setError('Could not export the spreadsheet.');
+    } finally {
+      setIsExporting(false);
     }
   }
 
@@ -1304,6 +1318,7 @@ export function App() {
                 error={error}
                 form={form}
                 isLoading={isLoading}
+                isExporting={isExporting}
                 isPlantEditorOpen={isPlantEditorOpen}
                 isSaving={isSaving}
                 plants={plants}
@@ -1312,6 +1327,7 @@ export function App() {
                 onCloseDetail={() => setSelectedPlantId(null)}
                 onDelete={(plant) => void removePlant(plant)}
                 onEdit={startEditingPlant}
+                onExport={() => void exportSpreadsheet()}
                 onFieldChange={updateForm}
                 onNew={startAddingPlant}
                 onOpenDetail={openPlantReadOnlyDetail}

@@ -1,4 +1,4 @@
-import { Edit3, Eye, Plus, Save, Trash2, X } from 'lucide-react';
+import { Download, Edit3, Eye, Plus, Save, Trash2, X } from 'lucide-react';
 import type { Plant } from '../domain';
 import type { PlantFormState } from '../form-state';
 
@@ -7,6 +7,7 @@ type PlantsViewProps = {
   error: string | null;
   form: PlantFormState;
   isLoading: boolean;
+  isExporting: boolean;
   isPlantEditorOpen: boolean;
   isSaving: boolean;
   plants: Plant[];
@@ -15,6 +16,7 @@ type PlantsViewProps = {
   onCloseDetail: () => void;
   onDelete: (plant: Plant) => void;
   onEdit: (plant: Plant) => void;
+  onExport: () => void;
   onFieldChange: (field: keyof PlantFormState, value: string) => void;
   onNew: () => void;
   onOpenDetail: (plant: Plant) => void;
@@ -26,6 +28,7 @@ export function PlantsView({
   error,
   form,
   isLoading,
+  isExporting,
   isPlantEditorOpen,
   isSaving,
   plants,
@@ -34,6 +37,7 @@ export function PlantsView({
   onCloseDetail,
   onDelete,
   onEdit,
+  onExport,
   onFieldChange,
   onNew,
   onOpenDetail,
@@ -49,10 +53,16 @@ export function PlantsView({
           </h2>
           <p>{error ?? 'Create and maintain plant objects.'}</p>
         </div>
-        <button className="primary-action" type="button" onClick={onNew}>
-          <Plus size={18} />
-          New plant
-        </button>
+        <div className="summary-actions">
+          <button className="primary-action" type="button" disabled={isExporting} onClick={onExport}>
+            <Download size={18} />
+            {isExporting ? 'Exporting' : 'Export'}
+          </button>
+          <button className="primary-action" type="button" onClick={onNew}>
+            <Plus size={18} />
+            New plant
+          </button>
+        </div>
       </section>
 
       {isPlantEditorOpen ? (

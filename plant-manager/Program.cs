@@ -52,5 +52,6 @@ app.MapPlantCareScheduleEndpoints();
 app.MapCareTaskEndpoints();
 app.MapActionLogEndpoints();
 app.MapPlantFlagEndpoints();
+app.MapExportEndpoints();
 
 app.Run();
