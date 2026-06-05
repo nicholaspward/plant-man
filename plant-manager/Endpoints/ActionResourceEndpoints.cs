@@ -21,22 +21,21 @@ namespace plant_manager.Endpoints
 
             app.MapPost("/api/action-resources", async (SaveActionResourceRequest request, ApplicationDbContext db) =>
             {
-                if (string.IsNullOrWhiteSpace(request.Name))
+                if (!EndpointHelpers.TryNormalizeRequired(request.Name, "Resource name is required.", out var name, out var error))
                 {
-                    return Results.BadRequest(new { error = "Resource name is required." });
+                    return error;
                 }
 
-                var name = request.Name.Trim();
-                var exists = await db.ActionResources.AnyAsync(resource => resource.Name.ToLower() == name.ToLower());
+                var exists = await db.NameExistsAsync<ActionResource>(resource => resource.Name.ToLower() == name.ToLower());
                 if (exists)
                 {
-                    return Results.Conflict(new { error = "A resource with this name already exists." });
+                    return EndpointHelpers.Conflict("A resource with this name already exists.");
                 }
 
                 var resource = new ActionResource
                 {
                     Name = name,
-                    Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
+                    Notes = EndpointHelpers.NormalizeOptional(request.Notes)
                 };
 
                 db.ActionResources.Add(resource);
@@ -47,9 +46,9 @@ namespace plant_manager.Endpoints
 
             app.MapPut("/api/action-resources/{id:int}", async (int id, SaveActionResourceRequest request, ApplicationDbContext db) =>
             {
-                if (string.IsNullOrWhiteSpace(request.Name))
+                if (!EndpointHelpers.TryNormalizeRequired(request.Name, "Resource name is required.", out var name, out var error))
                 {
-                    return Results.BadRequest(new { error = "Resource name is required." });
+                    return error;
                 }
 
                 var resource = await db.ActionResources.FindAsync(id);
@@ -58,16 +57,15 @@ namespace plant_manager.Endpoints
                     return Results.NotFound();
                 }
 
-                var name = request.Name.Trim();
-                var exists = await db.ActionResources.AnyAsync(item =>
+                var exists = await db.NameExistsAsync<ActionResource>(item =>
                     item.Id != id && item.Name.ToLower() == name.ToLower());
                 if (exists)
                 {
-                    return Results.Conflict(new { error = "A resource with this name already exists." });
+                    return EndpointHelpers.Conflict("A resource with this name already exists.");
                 }
 
                 resource.Name = name;
-                resource.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
+                resource.Notes = EndpointHelpers.NormalizeOptional(request.Notes);
 
                 await db.SaveChangesAsync();
 
@@ -87,7 +85,7 @@ namespace plant_manager.Endpoints
                     || await db.RecipeComponents.AnyAsync(component => component.ActionResourceId == id);
                 if (isInUse)
                 {
-                    return Results.Conflict(new { error = "Resource is in use." });
+                    return EndpointHelpers.Conflict("Resource is in use.");
                 }
 
                 db.ActionResources.Remove(resource);

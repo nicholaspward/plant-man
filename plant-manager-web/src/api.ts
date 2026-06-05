@@ -11,6 +11,7 @@ import type {
   Recipe,
   RecipePayload,
   Plant,
+  PlantInfoSearchResult,
   AssignPlantFlagPayload,
   PlantPayload,
   PlantFlag,
@@ -79,6 +80,10 @@ export async function getPlantTaxa() {
   return request<PlantTaxon[]>('/api/plant-taxa');
 }
 
+export async function searchPlantInfo(query: string) {
+  return request<PlantInfoSearchResult[]>(`/api/plant-info/search?q=${encodeURIComponent(query)}`);
+}
+
 export async function getPlantLocations() {
   return request<PlantLocation[]>('/api/plant-locations');
 }
@@ -129,6 +134,13 @@ export async function deletePlantGroup(id: number) {
 
 export async function createPlantTaxon(payload: PlantTaxonPayload) {
   return request<PlantTaxon>('/api/plant-taxa', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function importPlantTaxon(payload: PlantInfoSearchResult) {
+  return request<PlantTaxon>('/api/plant-taxa/import', {
     method: 'POST',
     body: JSON.stringify(payload),
   });

@@ -20,22 +20,21 @@ namespace plant_manager.Endpoints
 
             app.MapPost("/api/plant-locations", async (SavePlantLocationRequest request, ApplicationDbContext db) =>
             {
-                if (string.IsNullOrWhiteSpace(request.Name))
+                if (!EndpointHelpers.TryNormalizeRequired(request.Name, "Location name is required.", out var name, out var error))
                 {
-                    return Results.BadRequest(new { error = "Location name is required." });
+                    return error;
                 }
 
-                var name = request.Name.Trim();
-                var exists = await db.PlantLocations.AnyAsync(location => location.Name.ToLower() == name.ToLower());
+                var exists = await db.NameExistsAsync<PlantLocation>(location => location.Name.ToLower() == name.ToLower());
                 if (exists)
                 {
-                    return Results.Conflict(new { error = "A location with this name already exists." });
+                    return EndpointHelpers.Conflict("A location with this name already exists.");
                 }
 
                 var location = new PlantLocation
                 {
                     Name = name,
-                    Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
+                    Notes = EndpointHelpers.NormalizeOptional(request.Notes)
                 };
 
                 db.PlantLocations.Add(location);
@@ -46,9 +45,9 @@ namespace plant_manager.Endpoints
 
             app.MapPut("/api/plant-locations/{id:int}", async (int id, SavePlantLocationRequest request, ApplicationDbContext db) =>
             {
-                if (string.IsNullOrWhiteSpace(request.Name))
+                if (!EndpointHelpers.TryNormalizeRequired(request.Name, "Location name is required.", out var name, out var error))
                 {
-                    return Results.BadRequest(new { error = "Location name is required." });
+                    return error;
                 }
 
                 var location = await db.PlantLocations.FindAsync(id);
@@ -57,16 +56,15 @@ namespace plant_manager.Endpoints
                     return Results.NotFound();
                 }
 
-                var name = request.Name.Trim();
-                var exists = await db.PlantLocations.AnyAsync(item =>
+                var exists = await db.NameExistsAsync<PlantLocation>(item =>
                     item.Id != id && item.Name.ToLower() == name.ToLower());
                 if (exists)
                 {
-                    return Results.Conflict(new { error = "A location with this name already exists." });
+                    return EndpointHelpers.Conflict("A location with this name already exists.");
                 }
 
                 location.Name = name;
-                location.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
+                location.Notes = EndpointHelpers.NormalizeOptional(request.Notes);
 
                 await db.SaveChangesAsync();
 
@@ -84,7 +82,7 @@ namespace plant_manager.Endpoints
                 var isInUse = await db.Plants.AnyAsync(plant => plant.LocationId == id);
                 if (isInUse)
                 {
-                    return Results.Conflict(new { error = "Location is assigned to one or more plants." });
+                    return EndpointHelpers.Conflict("Location is assigned to one or more plants.");
                 }
 
                 db.PlantLocations.Remove(location);

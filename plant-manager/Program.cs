@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using plant_manager.Data;
 using plant_manager.Endpoints;
+using plant_manager.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,11 +19,16 @@ builder.Services.AddCors(options =>
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+var plantInfoConnectionString = builder.Configuration.GetConnectionString("PlantInfoConnection")
+    ?? throw new InvalidOperationException("Connection string 'PlantInfoConnection' not found.");
 
 Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, "App_Data"));
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
+builder.Services.AddDbContext<PlantInfoDbContext>(options =>
+    options.UseSqlite(plantInfoConnectionString));
+builder.Services.AddScoped<PlantInfoSearchService>();
 
 var app = builder.Build();
 
@@ -37,6 +43,9 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     db.Database.Migrate();
     DatabaseSeeder.Seed(db);
+
+    var plantInfoDb = scope.ServiceProvider.GetRequiredService<PlantInfoDbContext>();
+    await plantInfoDb.EnsureSearchSchemaAsync();
 }
 
 app.MapRootEndpoints();
@@ -53,5 +62,6 @@ app.MapCareTaskEndpoints();
 app.MapActionLogEndpoints();
 app.MapPlantFlagEndpoints();
 app.MapExportEndpoints();
+app.MapPlantInfoEndpoints();
 
 app.Run();

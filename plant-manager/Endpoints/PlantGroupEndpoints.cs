@@ -25,20 +25,20 @@ namespace plant_manager.Endpoints
                 var validation = await ValidateRequest(request, db);
                 if (validation.Error is not null)
                 {
-                    return Results.BadRequest(new { error = validation.Error });
+                    return EndpointHelpers.BadRequest(validation.Error);
                 }
 
-                var name = request.Name.Trim();
-                var exists = await db.PlantGroups.AnyAsync(group => group.Name.ToLower() == name.ToLower());
+                var name = validation.Name;
+                var exists = await db.NameExistsAsync<PlantGroup>(group => group.Name.ToLower() == name.ToLower());
                 if (exists)
                 {
-                    return Results.Conflict(new { error = "A plant group with this name already exists." });
+                    return EndpointHelpers.Conflict("A plant group with this name already exists.");
                 }
 
                 var group = new PlantGroup
                 {
                     Name = name,
-                    Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
+                    Notes = EndpointHelpers.NormalizeOptional(request.Notes),
                     Memberships = validation.PlantIds
                         .Select(plantId => new PlantGroupMembership { PlantId = plantId })
                         .ToList()
@@ -70,19 +70,19 @@ namespace plant_manager.Endpoints
                 var validation = await ValidateRequest(request, db);
                 if (validation.Error is not null)
                 {
-                    return Results.BadRequest(new { error = validation.Error });
+                    return EndpointHelpers.BadRequest(validation.Error);
                 }
 
-                var name = request.Name.Trim();
-                var exists = await db.PlantGroups.AnyAsync(item =>
+                var name = validation.Name;
+                var exists = await db.NameExistsAsync<PlantGroup>(item =>
                     item.Id != id && item.Name.ToLower() == name.ToLower());
                 if (exists)
                 {
-                    return Results.Conflict(new { error = "A plant group with this name already exists." });
+                    return EndpointHelpers.Conflict("A plant group with this name already exists.");
                 }
 
                 group.Name = name;
-                group.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
+                group.Notes = EndpointHelpers.NormalizeOptional(request.Notes);
                 db.PlantGroupMemberships.RemoveRange(group.Memberships);
                 group.Memberships = validation.PlantIds
                     .Select(plantId => new PlantGroupMembership
@@ -118,13 +118,13 @@ namespace plant_manager.Endpoints
             });
         }
 
-        private static async Task<(List<int> PlantIds, string? Error)> ValidateRequest(
+        private static async Task<(string Name, List<int> PlantIds, string? Error)> ValidateRequest(
             SavePlantGroupRequest request,
             ApplicationDbContext db)
         {
-            if (string.IsNullOrWhiteSpace(request.Name))
+            if (!EndpointHelpers.TryNormalizeRequired(request.Name, "Group name is required.", out var name, out _))
             {
-                return ([], "Group name is required.");
+                return (string.Empty, [], "Group name is required.");
             }
 
             var plantIds = request.PlantIds?
@@ -137,11 +137,11 @@ namespace plant_manager.Endpoints
                 var existingPlantCount = await db.Plants.CountAsync(plant => plantIds.Contains(plant.Id));
                 if (existingPlantCount != plantIds.Count)
                 {
-                    return ([], "One or more plants were not found.");
+                    return (string.Empty, [], "One or more plants were not found.");
                 }
             }
 
-            return (plantIds, null);
+            return (name, plantIds, null);
         }
     }
 }

@@ -9,6 +9,7 @@ import type {
   Recipe,
   RecipePayload,
   Plant,
+  PlantInfoSearchResult,
   AssignPlantFlagPayload,
   PlantPayload,
   PlantFlagDefinition,
@@ -37,6 +38,10 @@ export const emptyTaxonForm = {
   cultivar: '',
   variety: '',
   authority: '',
+  family: '',
+  commonName: '',
+  externalSource: '',
+  externalId: '',
 };
 
 export const emptyLocationForm = {
@@ -187,6 +192,25 @@ export function toTaxonForm(taxon: PlantTaxon): TaxonFormState {
     cultivar: taxon.cultivar ?? '',
     variety: taxon.variety ?? '',
     authority: taxon.authority ?? '',
+    family: taxon.family ?? '',
+    commonName: taxon.commonName ?? '',
+    externalSource: taxon.externalSource ?? '',
+    externalId: taxon.externalId ?? '',
+  };
+}
+
+export function toTaxonFormFromPlantInfo(result: PlantInfoSearchResult): TaxonFormState {
+  const canonicalName = result.canonicalName ?? result.scientificName;
+
+  return {
+    ...emptyTaxonForm,
+    name: result.commonName ?? canonicalName,
+    genus: result.genus ?? '',
+    species: result.species ?? canonicalName.split(' ')[1] ?? '',
+    family: result.family ?? '',
+    commonName: result.commonName ?? '',
+    externalSource: result.source,
+    externalId: result.externalId,
   };
 }
 
@@ -198,6 +222,10 @@ export function toTaxonPayload(form: TaxonFormState): PlantTaxonPayload {
     cultivar: form.cultivar.trim() || null,
     variety: form.variety.trim() || null,
     authority: form.authority.trim() || null,
+    family: form.family.trim() || null,
+    commonName: form.commonName.trim() || null,
+    externalSource: form.externalSource.trim() || null,
+    externalId: form.externalId.trim() || null,
   };
 }
 

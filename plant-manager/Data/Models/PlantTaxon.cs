@@ -11,5 +11,9 @@ namespace plant_manager.Data.Models
         public string? Cultivar { get; set; }
         public string? Variety { get; set; }
         public string? Authority { get; set; }
+        public string? Family { get; set; }
+        public string? CommonName { get; set; }
+        public string? ExternalSource { get; set; }
+        public string? ExternalId { get; set; }
     }
 }

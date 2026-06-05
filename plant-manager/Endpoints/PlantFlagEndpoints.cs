@@ -20,17 +20,16 @@ namespace plant_manager.Endpoints
 
             app.MapPost("/api/plant-flags", async (SavePlantFlagDefinitionRequest request, ApplicationDbContext db) =>
             {
-                if (string.IsNullOrWhiteSpace(request.Name))
+                if (!EndpointHelpers.TryNormalizeRequired(request.Name, "Flag name is required.", out var name, out var error))
                 {
-                    return Results.BadRequest(new { error = "Flag name is required." });
+                    return error;
                 }
 
-                var name = request.Name.Trim();
-                var exists = await db.PlantFlagDefinitions.AnyAsync(definition =>
+                var exists = await db.NameExistsAsync<PlantFlagDefinition>(definition =>
                     definition.Name.ToLower() == name.ToLower());
                 if (exists)
                 {
-                    return Results.Conflict(new { error = "A flag with this name already exists." });
+                    return EndpointHelpers.Conflict("A flag with this name already exists.");
                 }
 
                 var definition = new PlantFlagDefinition
@@ -47,23 +46,22 @@ namespace plant_manager.Endpoints
 
             app.MapPut("/api/plant-flags/{id:int}", async (int id, SavePlantFlagDefinitionRequest request, ApplicationDbContext db) =>
             {
-                if (string.IsNullOrWhiteSpace(request.Name))
+                if (!EndpointHelpers.TryNormalizeRequired(request.Name, "Flag name is required.", out var name, out var error))
                 {
-                    return Results.BadRequest(new { error = "Flag name is required." });
+                    return error;
                 }
 
-                var name = request.Name.Trim();
                 var definition = await db.PlantFlagDefinitions.FindAsync(id);
                 if (definition is null)
                 {
                     return Results.NotFound();
                 }
 
-                var exists = await db.PlantFlagDefinitions.AnyAsync(item =>
+                var exists = await db.NameExistsAsync<PlantFlagDefinition>(item =>
                     item.Id != id && item.Name.ToLower() == name.ToLower());
                 if (exists)
                 {
-                    return Results.Conflict(new { error = "A flag with this name already exists." });
+                    return EndpointHelpers.Conflict("A flag with this name already exists.");
                 }
 
                 definition.Name = name;
@@ -85,7 +83,7 @@ namespace plant_manager.Endpoints
                 var isUsed = await db.PlantFlags.AnyAsync(flag => flag.PlantFlagDefinitionId == id);
                 if (isUsed)
                 {
-                    return Results.Conflict(new { error = "Flag is assigned to plants." });
+                    return EndpointHelpers.Conflict("Flag is assigned to plants.");
                 }
 
                 db.PlantFlagDefinitions.Remove(definition);
@@ -117,7 +115,7 @@ namespace plant_manager.Endpoints
                     && flag.ResolvedOn == null);
                 if (hasActiveFlag)
                 {
-                    return Results.Conflict(new { error = "This plant already has that active flag." });
+                    return EndpointHelpers.Conflict("This plant already has that active flag.");
                 }
 
                 var flag = new PlantFlag
@@ -200,6 +198,6 @@ namespace plant_manager.Endpoints
             string.IsNullOrWhiteSpace(color) ? "#f2f2f2" : color.Trim();
 
         private static string? NormalizeNotes(string? notes) =>
-            string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
+            EndpointHelpers.NormalizeOptional(notes);
     }
 }

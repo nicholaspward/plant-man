@@ -19,7 +19,8 @@ namespace plant_manager.Endpoints
                     "/api/care-activities",
                     "/api/care-tasks/upcoming",
                     "/api/action-logs",
-                    "/api/export/spreadsheet"
+                    "/api/export/spreadsheet",
+                    "/api/plant-info/search"
                 }
             }));
 

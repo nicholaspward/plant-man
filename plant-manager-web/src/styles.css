@@ -750,7 +750,79 @@ dd {
   gap: 9px;
 }
 
+.search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.query-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 12px;
+}
+
+.query-chip {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #cfc4b4;
+  border-radius: 999px;
+  background: var(--field);
+  color: #33463b;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.query-chip:hover {
+  border-color: var(--link);
+  background: var(--sage);
+  color: var(--link);
+}
+
+.plant-info-result {
+  min-width: 0;
+}
+
+.plant-info-result h3,
+.plant-info-result p {
+  margin: 0;
+}
+
+.plant-info-result p {
+  margin-top: 3px;
+  color: var(--muted);
+}
+
+.plant-info-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px 12px;
+  margin: 10px 0 0;
+}
+
+.plant-info-meta div {
+  min-width: 0;
+}
+
+.plant-info-meta dt {
+  color: #65756a;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.plant-info-meta dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+  color: #26362d;
+  font-size: 0.78rem;
+}
+
 .plant-form label,
+.search-row label,
 .flag-assignment-form label {
   display: grid;
   gap: 4px;
@@ -762,6 +834,7 @@ dd {
 .plant-form input,
 .plant-form select,
 .plant-form textarea,
+.search-row input,
 .flag-assignment-form input,
 .flag-assignment-form select {
   width: 100%;
@@ -1430,6 +1503,7 @@ dd {
   .detail-row,
   .plant-detail-grid,
   .plant-form,
+  .search-row,
   .resource-entry,
   .resource-amount,
   .activity-config-row,
@@ -1440,6 +1514,10 @@ dd {
   }
 
   .plant-detail-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .plant-info-meta {
     grid-template-columns: 1fr;
   }
 

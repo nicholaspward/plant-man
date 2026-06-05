@@ -20,22 +20,21 @@ namespace plant_manager.Endpoints
 
             app.MapPost("/api/care-actions", async (SaveCareActionRequest request, ApplicationDbContext db) =>
             {
-                if (string.IsNullOrWhiteSpace(request.Name))
+                if (!EndpointHelpers.TryNormalizeRequired(request.Name, "Action name is required.", out var name, out var error))
                 {
-                    return Results.BadRequest(new { error = "Action name is required." });
+                    return error;
                 }
 
-                var name = request.Name.Trim();
-                var exists = await db.CareActions.AnyAsync(action => action.Name.ToLower() == name.ToLower());
+                var exists = await db.NameExistsAsync<CareAction>(action => action.Name.ToLower() == name.ToLower());
                 if (exists)
                 {
-                    return Results.Conflict(new { error = "An action with this name already exists." });
+                    return EndpointHelpers.Conflict("An action with this name already exists.");
                 }
 
                 var action = new CareAction
                 {
                     Name = name,
-                    Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim()
+                    Description = EndpointHelpers.NormalizeOptional(request.Description)
                 };
 
                 db.CareActions.Add(action);
@@ -46,9 +45,9 @@ namespace plant_manager.Endpoints
 
             app.MapPut("/api/care-actions/{id:int}", async (int id, SaveCareActionRequest request, ApplicationDbContext db) =>
             {
-                if (string.IsNullOrWhiteSpace(request.Name))
+                if (!EndpointHelpers.TryNormalizeRequired(request.Name, "Action name is required.", out var name, out var error))
                 {
-                    return Results.BadRequest(new { error = "Action name is required." });
+                    return error;
                 }
 
                 var action = await db.CareActions.FindAsync(id);
@@ -57,16 +56,15 @@ namespace plant_manager.Endpoints
                     return Results.NotFound();
                 }
 
-                var name = request.Name.Trim();
-                var exists = await db.CareActions.AnyAsync(item =>
+                var exists = await db.NameExistsAsync<CareAction>(item =>
                     item.Id != id && item.Name.ToLower() == name.ToLower());
                 if (exists)
                 {
-                    return Results.Conflict(new { error = "An action with this name already exists." });
+                    return EndpointHelpers.Conflict("An action with this name already exists.");
                 }
 
                 action.Name = name;
-                action.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
+                action.Description = EndpointHelpers.NormalizeOptional(request.Description);
 
                 await db.SaveChangesAsync();
 
@@ -84,7 +82,7 @@ namespace plant_manager.Endpoints
                 var hasLogs = await db.ActionLogs.AnyAsync(log => log.CareActionId == id);
                 if (hasLogs)
                 {
-                    return Results.Conflict(new { error = "Action has care history." });
+                    return EndpointHelpers.Conflict("Action has care history.");
                 }
 
                 db.CareActions.Remove(action);

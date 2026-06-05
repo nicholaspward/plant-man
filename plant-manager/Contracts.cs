@@ -47,7 +47,23 @@ namespace plant_manager
         string Species,
         string? Cultivar,
         string? Variety,
-        string? Authority);
+        string? Authority,
+        string? Family,
+        string? CommonName,
+        string? ExternalSource,
+        string? ExternalId);
+
+    public record ImportPlantTaxonRequest(
+        string Source,
+        string ExternalId,
+        string ScientificName,
+        string? CanonicalName,
+        string? CommonName,
+        string? Rank,
+        string? Status,
+        string? Family,
+        string? Genus,
+        string? Species);
 
     public record SavePlantLocationRequest(
         string Name,
@@ -178,7 +194,11 @@ namespace plant_manager
         string Species,
         string? Cultivar,
         string? Variety,
-        string? Authority)
+        string? Authority,
+        string? Family,
+        string? CommonName,
+        string? ExternalSource,
+        string? ExternalId)
     {
         public static PlantTaxonDto FromTaxon(PlantTaxon taxon) =>
             new(
@@ -188,7 +208,11 @@ namespace plant_manager
                 taxon.Species,
                 taxon.Cultivar,
                 taxon.Variety,
-                taxon.Authority);
+                taxon.Authority,
+                taxon.Family,
+                taxon.CommonName,
+                taxon.ExternalSource,
+                taxon.ExternalId);
     }
 
     public record PlantLocationDto(

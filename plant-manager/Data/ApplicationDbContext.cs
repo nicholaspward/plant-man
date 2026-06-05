@@ -38,6 +38,11 @@ namespace plant_manager.Data
                 entity.Property(e => e.Cultivar).HasMaxLength(120);
                 entity.Property(e => e.Variety).HasMaxLength(120);
                 entity.Property(e => e.Authority).HasMaxLength(120);
+                entity.Property(e => e.Family).HasMaxLength(120);
+                entity.Property(e => e.CommonName).HasMaxLength(120);
+                entity.Property(e => e.ExternalSource).HasMaxLength(40);
+                entity.Property(e => e.ExternalId).HasMaxLength(80);
+                entity.HasIndex(e => new { e.ExternalSource, e.ExternalId }).IsUnique(false);
             });
 
             modelBuilder.Entity<Plant>(entity =>

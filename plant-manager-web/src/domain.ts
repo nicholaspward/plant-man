@@ -49,6 +49,23 @@ export type PlantTaxon = {
   cultivar: string | null;
   variety: string | null;
   authority: string | null;
+  family: string | null;
+  commonName: string | null;
+  externalSource: string | null;
+  externalId: string | null;
+};
+
+export type PlantInfoSearchResult = {
+  source: string;
+  externalId: string;
+  scientificName: string;
+  canonicalName: string | null;
+  commonName: string | null;
+  rank: string | null;
+  status: string | null;
+  family: string | null;
+  genus: string | null;
+  species: string | null;
 };
 
 export type PlantLocation = {
@@ -220,6 +237,10 @@ export type PlantTaxonPayload = {
   cultivar: string | null;
   variety: string | null;
   authority: string | null;
+  family: string | null;
+  commonName: string | null;
+  externalSource: string | null;
+  externalId: string | null;
 };
 
 export type PlantLocationPayload = {
