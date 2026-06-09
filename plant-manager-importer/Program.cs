@@ -151,7 +151,7 @@ static IEnumerable<PlantInfoImportRecord> ReadGbifDwcaRecords(
             var rank = layout.Taxon.Value(fields, "taxonRank");
             var status = layout.Taxon.Value(fields, "taxonomicStatus");
             if (!EqualsIgnoreCase(kingdom, "Plantae") ||
-                !EqualsIgnoreCase(rank, "species") ||
+                !IsSpeciesOrBelowRank(rank) ||
                 !EqualsIgnoreCase(status, "accepted"))
             {
                 continue;
@@ -295,6 +295,20 @@ static bool IsEnglishOrUnknown(string? language) =>
     EqualsIgnoreCase(language, "en") ||
     EqualsIgnoreCase(language, "eng") ||
     EqualsIgnoreCase(language, "english");
+
+static bool IsSpeciesOrBelowRank(string? rank)
+{
+    var normalized = rank?.Trim().Replace(" ", "_").Replace("-", "_").ToLowerInvariant();
+    return normalized is
+        "species" or
+        "subspecies" or
+        "variety" or
+        "subvariety" or
+        "form" or
+        "forma" or
+        "subform" or
+        "subforma";
+}
 
 static async Task CreateSchemaAsync(SqliteConnection connection)
 {

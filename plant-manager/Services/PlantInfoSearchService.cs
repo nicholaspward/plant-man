@@ -37,6 +37,7 @@ namespace plant_manager.Services
                     r.Family,
                     r.Genus,
                     r.Species,
+                    r.AliasesText,
                     CASE
                         WHEN lower(coalesce(r.CommonName, '')) = $normalized THEN 0
                         WHEN lower(coalesce(r.CanonicalName, '')) = $normalized THEN 1
@@ -88,7 +89,8 @@ namespace plant_manager.Services
                     ReadNullableString(reader, 6),
                     ReadNullableString(reader, 7),
                     ReadNullableString(reader, 8),
-                    ReadNullableString(reader, 9)));
+                    ReadNullableString(reader, 9),
+                    ToCommonNames(ReadNullableString(reader, 10))));
             }
 
             return results;
@@ -120,6 +122,20 @@ namespace plant_manager.Services
 
         private static string? ReadNullableString(IDataRecord reader, int ordinal) =>
             reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
+
+        private static IReadOnlyList<string> ToCommonNames(string? aliasesText)
+        {
+            if (string.IsNullOrWhiteSpace(aliasesText))
+            {
+                return [];
+            }
+
+            return aliasesText
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Order(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
     }
 
     public record PlantInfoSearchResultDto(
@@ -132,5 +148,6 @@ namespace plant_manager.Services
         string? Status,
         string? Family,
         string? Genus,
-        string? Species);
+        string? Species,
+        IReadOnlyList<string> CommonNames);
 }

@@ -30,13 +30,6 @@ type TaxaViewProps = {
   onSearchQueryChange: (value: string) => void;
 };
 
-const plantInfoSearchExamples = [
-  'ficus',
-  'monstera',
-  'alocasia',
-  'croton',
-];
-
 function getPlantInfoSubtitle(result: PlantInfoSearchResult) {
   if (result.commonName) {
     return result.commonName;
@@ -116,19 +109,6 @@ export function TaxaView({
           </button>
         </div>
 
-        <div className="query-chip-row" aria-label="Example plant info searches">
-          {plantInfoSearchExamples.map((query) => (
-            <button
-              className="query-chip"
-              type="button"
-              key={query}
-              onClick={() => onSearch(query)}
-            >
-              {query}
-            </button>
-          ))}
-        </div>
-
         {plantInfoResults.length > 0 ? (
           <div className="plant-list">
             {plantInfoResults.map((result) => (
@@ -137,6 +117,10 @@ export function TaxaView({
                   <h3>{result.canonicalName ?? result.scientificName}</h3>
                   <p>{getPlantInfoSubtitle(result)}</p>
                   <dl className="plant-info-meta">
+                    <div>
+                      <dt>Common Names</dt>
+                      <dd>{result.commonNames.length > 0 ? result.commonNames.join(', ') : 'None'}</dd>
+                    </div>
                     <div>
                       <dt>Family</dt>
                       <dd>{result.family ?? 'Unknown'}</dd>
@@ -155,7 +139,19 @@ export function TaxaView({
                     </div>
                     <div>
                       <dt>Source</dt>
-                      <dd>{`${result.source}:${result.externalId}`}</dd>
+                      <dd>
+                        {result.source === 'gbif' ? (
+                          <a
+                            href={`https://www.gbif.org/species/${result.externalId}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {`${result.source}:${result.externalId}`}
+                          </a>
+                        ) : (
+                          `${result.source}:${result.externalId}`
+                        )}
+                      </dd>
                     </div>
                   </dl>
                 </div>

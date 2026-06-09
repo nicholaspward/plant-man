@@ -757,31 +757,6 @@ dd {
   gap: 10px;
 }
 
-.query-chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 8px 0 12px;
-}
-
-.query-chip {
-  min-height: 30px;
-  padding: 0 10px;
-  border: 1px solid #cfc4b4;
-  border-radius: 999px;
-  background: var(--field);
-  color: #33463b;
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.query-chip:hover {
-  border-color: var(--link);
-  background: var(--sage);
-  color: var(--link);
-}
-
 .plant-info-result {
   min-width: 0;
 }

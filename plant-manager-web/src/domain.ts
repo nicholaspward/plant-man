@@ -66,6 +66,7 @@ export type PlantInfoSearchResult = {
   family: string | null;
   genus: string | null;
   species: string | null;
+  commonNames: string[];
 };
 
 export type PlantLocation = {

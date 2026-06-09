@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   assignPlantFlag,
   completeCareTasksBulk,
@@ -56,6 +56,9 @@ import {
 import type { useAppEditors } from './use-app-editors';
 import type { useDashboardData } from './use-dashboard-data';
 
+const plantInfoSearchDebounceMs = 150;
+const plantInfoSearchMinLength = 2;
+
 type Editors = ReturnType<typeof useAppEditors>;
 type DashboardData = ReturnType<typeof useDashboardData>;
 
@@ -90,6 +93,39 @@ export function useAppActions({
   const [plantInfoQuery, setPlantInfoQuery] = useState('');
   const [plantInfoResults, setPlantInfoResults] = useState<PlantInfoSearchResult[]>([]);
   const [hasSearchedPlantInfo, setHasSearchedPlantInfo] = useState(false);
+  const latestPlantInfoSearchId = useRef(0);
+  const lastCompletedPlantInfoQuery = useRef('');
+
+  useEffect(() => {
+    const query = plantInfoQuery.trim();
+    if (query.length === 0) {
+      latestPlantInfoSearchId.current += 1;
+      lastCompletedPlantInfoQuery.current = '';
+      setPlantInfoResults([]);
+      setHasSearchedPlantInfo(false);
+      setIsSearchingPlantInfo(false);
+      return;
+    }
+
+    if (query.length < plantInfoSearchMinLength) {
+      latestPlantInfoSearchId.current += 1;
+      lastCompletedPlantInfoQuery.current = '';
+      setPlantInfoResults([]);
+      setHasSearchedPlantInfo(false);
+      setIsSearchingPlantInfo(false);
+      return;
+    }
+
+    if (query !== lastCompletedPlantInfoQuery.current) {
+      setIsSearchingPlantInfo(true);
+    }
+
+    const timeout = window.setTimeout(() => {
+      void searchTaxonInfo(query, { updateQuery: false });
+    }, plantInfoSearchDebounceMs);
+
+    return () => window.clearTimeout(timeout);
+  }, [plantInfoQuery]);
 
   async function savePlant() {
     if (!editors.form.nickname.trim()) {
@@ -211,24 +247,44 @@ export function useAppActions({
     }
   }
 
-  async function searchTaxonInfo(queryOverride?: string) {
+  async function searchTaxonInfo(
+    queryOverride?: string,
+    options: { updateQuery?: boolean } = {},
+  ) {
     const query = queryOverride ?? plantInfoQuery;
-    setPlantInfoQuery(query);
+    if (options.updateQuery ?? true) {
+      setPlantInfoQuery(query);
+    }
 
-    if (query.trim().length < 2) {
+    const trimmedQuery = query.trim();
+    if (trimmedQuery.length < plantInfoSearchMinLength) {
       setError('Search needs at least 2 characters.');
       return;
     }
 
+    if (trimmedQuery === lastCompletedPlantInfoQuery.current) {
+      return;
+    }
+
+    const searchId = latestPlantInfoSearchId.current + 1;
+    latestPlantInfoSearchId.current = searchId;
     setIsSearchingPlantInfo(true);
     try {
       setError(null);
       setHasSearchedPlantInfo(true);
-      setPlantInfoResults(await searchPlantInfo(query));
+      const results = await searchPlantInfo(trimmedQuery);
+      if (latestPlantInfoSearchId.current === searchId) {
+        lastCompletedPlantInfoQuery.current = trimmedQuery;
+        setPlantInfoResults(results);
+      }
     } catch {
-      setError('Could not search offline plant info.');
+      if (latestPlantInfoSearchId.current === searchId) {
+        setError('Could not search offline plant info.');
+      }
     } finally {
-      setIsSearchingPlantInfo(false);
+      if (latestPlantInfoSearchId.current === searchId) {
+        setIsSearchingPlantInfo(false);
+      }
     }
   }
 
