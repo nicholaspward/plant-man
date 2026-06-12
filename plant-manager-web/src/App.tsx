@@ -553,7 +553,6 @@ export function App() {
                 plants={plants}
                 onCompleteBulkTasks={(tasks) => void completeBulkTasks(tasks)}
                 onCompleteTask={(task) => void completeTask(task)}
-                onNewPlant={startAddingPlant}
                 onOpenPlant={openPlantDetail}
               />
             )}

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { CalendarCheck, Plus } from 'lucide-react';
+import { CalendarCheck } from 'lucide-react';
 import type { CareTask, Plant, PlantGroup } from '../domain';
 import { PlantCard } from './PlantCard';
 
@@ -12,7 +12,6 @@ type HomeViewProps = {
   plants: Plant[];
   onCompleteBulkTasks: (tasks: CareTask[]) => void;
   onCompleteTask: (task: CareTask) => void;
-  onNewPlant: () => void;
   onOpenPlant: (plant: Plant) => void;
 };
 
@@ -25,7 +24,6 @@ export function HomeView({
   plants,
   onCompleteBulkTasks,
   onCompleteTask,
-  onNewPlant,
   onOpenPlant,
 }: HomeViewProps) {
   const dueTaskGroups = groupDueTasks(careTasks);
@@ -192,9 +190,6 @@ export function HomeView({
       <section className="section" aria-labelledby="plants-heading">
         <div className="section-heading">
           <h2 id="plants-heading">My Plants</h2>
-          <button className="icon-button compact" type="button" aria-label="Add plant" onClick={onNewPlant}>
-            <Plus size={18} />
-          </button>
         </div>
 
         <div className="plant-grid">
