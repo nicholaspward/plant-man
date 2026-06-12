@@ -833,6 +833,28 @@ dd {
   grid-column: 1 / -1;
 }
 
+.catalog-import-panel {
+  gap: 12px;
+}
+
+.import-file-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.import-preview {
+  display: grid;
+  gap: 10px;
+}
+
+.import-sheet-list,
+.import-issue-list {
+  border-top: 1px solid var(--border);
+}
+
+.import-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .preserve-lines {
   white-space: pre-wrap;
 }

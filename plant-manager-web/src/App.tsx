@@ -4,6 +4,7 @@ import { ActivitiesView } from './components/ActivitiesView';
 import { FlagsView } from './components/FlagsView';
 import { GroupsView } from './components/GroupsView';
 import { HomeView } from './components/HomeView';
+import { ImportExportView } from './components/ImportExportView';
 import { LocationsView } from './components/LocationsView';
 import { PlantManagementView } from './components/PlantManagementView';
 import { PlantsView } from './components/PlantsView';
@@ -26,6 +27,7 @@ export function App() {
     dueCount,
     error,
     isLoading,
+    loadDashboard,
     loadCareModel,
     loadFlagsAndPlants,
     loadGroupsAndPlants,
@@ -145,10 +147,13 @@ export function App() {
   } = editors;
   const {
     assignFlagToSelectedPlant,
+    applyCatalogImportFile,
+    catalogImportResult,
     completeBulkTasks,
     completeTask,
     exportSpreadsheet,
     isExporting,
+    isImportingCatalog,
     isSearchingPlantInfo,
     isSaving,
     importTaxonFromPlantInfo,
@@ -178,11 +183,13 @@ export function App() {
     saveResource,
     saveTaxon,
     searchTaxonInfo,
+    previewCatalogImportFile,
     setManagedPlantLocation,
     setManagedPlantTaxon,
     setPlantInfoQuery,
   } = useAppActions({
     editors,
+    loadDashboard,
     loadCareModel,
     loadFlagsAndPlants,
     loadGroupsAndPlants,
@@ -233,6 +240,13 @@ export function App() {
                 onClick={() => setView('plant-management')}
               >
                 Plant Management
+              </button>
+              <button
+                type="button"
+                aria-current={view === 'import-export' ? 'page' : undefined}
+                onClick={() => setView('import-export')}
+              >
+                Import / Export
               </button>
             </div>
 
@@ -334,7 +348,6 @@ export function App() {
                 error={error}
                 form={form}
                 isLoading={isLoading}
-                isExporting={isExporting}
                 isPlantEditorOpen={isPlantEditorOpen}
                 isSaving={isSaving}
                 plants={plants}
@@ -343,7 +356,6 @@ export function App() {
                 onCloseDetail={() => setSelectedPlantId(null)}
                 onDelete={(plant) => void removePlant(plant)}
                 onEdit={startEditingPlant}
-                onExport={() => void exportSpreadsheet()}
                 onFieldChange={updateForm}
                 onNew={startAddingPlant}
                 onOpenDetail={openPlantReadOnlyDetail}
@@ -368,6 +380,16 @@ export function App() {
                 onSelectPlant={selectManagedPlant}
                 onSetLocation={setManagedPlantLocation}
                 onSetTaxon={setManagedPlantTaxon}
+              />
+            ) : view === 'import-export' ? (
+              <ImportExportView
+                catalogImportResult={catalogImportResult}
+                error={error}
+                isExporting={isExporting}
+                isImportingCatalog={isImportingCatalog}
+                onApplyCatalogImport={(file) => void applyCatalogImportFile(file)}
+                onExport={() => void exportSpreadsheet()}
+                onPreviewCatalogImport={(file) => void previewCatalogImportFile(file)}
               />
             ) : view === 'schedules' ? (
               <SchedulesView
@@ -569,6 +591,7 @@ function getViewEyebrow(view: View) {
       return 'Operations';
     case 'plants':
     case 'plant-management':
+    case 'import-export':
       return 'Operations';
     case 'schedules':
       return 'Care';
@@ -593,6 +616,8 @@ function getViewTitle(view: View) {
       return 'Plants';
     case 'plant-management':
       return 'Plant Management';
+    case 'import-export':
+      return 'Import / Export';
     case 'schedules':
       return 'Scheduler';
     case 'taxa':

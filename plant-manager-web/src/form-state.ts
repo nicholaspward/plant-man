@@ -135,7 +135,7 @@ export type RecipeFormState = typeof emptyRecipeForm;
 export type FlagDefinitionFormState = typeof emptyFlagDefinitionForm;
 export type PlantFlagFormState = typeof emptyPlantFlagForm;
 export type BulkScheduleFormState = typeof emptyBulkScheduleForm;
-export type View = 'home' | 'plants' | 'plant-management' | 'schedules' | 'taxa' | 'locations' | 'groups' | 'actions' | 'resources' | 'recipes' | 'activities' | 'flags';
+export type View = 'home' | 'plants' | 'plant-management' | 'schedules' | 'taxa' | 'locations' | 'groups' | 'actions' | 'resources' | 'recipes' | 'activities' | 'flags' | 'import-export';
 
 export function toPlantForm(plant: Plant): PlantFormState {
   return {

@@ -5,6 +5,7 @@ import type {
   CareActivityPayload,
   CareAction,
   CareActionPayload,
+  CatalogImportResult,
   BulkCompleteCareTasksPayload,
   CareTask,
   BulkPlantCareSchedulePayload,
@@ -70,6 +71,30 @@ export async function downloadSpreadsheetExport() {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+async function uploadCatalogImport(path: string, file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  return response.json() as Promise<CatalogImportResult>;
+}
+
+export async function previewCatalogImport(file: File) {
+  return uploadCatalogImport('/api/import/catalog/preview', file);
+}
+
+export async function applyCatalogImport(file: File) {
+  return uploadCatalogImport('/api/import/catalog/apply', file);
 }
 
 export async function getPlants() {

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  applyCatalogImport,
   assignPlantFlag,
   completeCareTasksBulk,
   createActionResource,
@@ -22,6 +23,7 @@ import {
   deleteRecipe,
   downloadSpreadsheetExport,
   importPlantTaxon,
+  previewCatalogImport,
   removePlantCareSchedulesBulk,
   removePlantFlagAssignment,
   resolvePlantFlag,
@@ -37,7 +39,7 @@ import {
   updatePlantTaxon,
   updateRecipe,
 } from './api';
-import type { CareTask, Plant, PlantFlag, PlantInfoSearchResult } from './domain';
+import type { CareTask, CatalogImportResult, Plant, PlantFlag, PlantInfoSearchResult } from './domain';
 import {
   emptyBulkScheduleForm,
   emptyPlantFlagForm,
@@ -64,6 +66,7 @@ type DashboardData = ReturnType<typeof useDashboardData>;
 
 type AppActionOptions = {
   editors: Editors;
+  loadDashboard: DashboardData['loadDashboard'];
   loadCareModel: DashboardData['loadCareModel'];
   loadFlagsAndPlants: DashboardData['loadFlagsAndPlants'];
   loadGroupsAndPlants: DashboardData['loadGroupsAndPlants'];
@@ -77,6 +80,7 @@ type AppActionOptions = {
 
 export function useAppActions({
   editors,
+  loadDashboard,
   loadCareModel,
   loadFlagsAndPlants,
   loadGroupsAndPlants,
@@ -89,6 +93,8 @@ export function useAppActions({
 }: AppActionOptions) {
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isImportingCatalog, setIsImportingCatalog] = useState(false);
+  const [catalogImportResult, setCatalogImportResult] = useState<CatalogImportResult | null>(null);
   const [isSearchingPlantInfo, setIsSearchingPlantInfo] = useState(false);
   const [plantInfoQuery, setPlantInfoQuery] = useState('');
   const [plantInfoResults, setPlantInfoResults] = useState<PlantInfoSearchResult[]>([]);
@@ -221,6 +227,37 @@ export function useAppActions({
       setError('Could not export the spreadsheet.');
     } finally {
       setIsExporting(false);
+    }
+  }
+
+  async function previewCatalogImportFile(file: File) {
+    setIsImportingCatalog(true);
+    try {
+      setError(null);
+      const result = await previewCatalogImport(file);
+      setCatalogImportResult(result);
+    } catch {
+      setError('Could not preview the catalog import.');
+    } finally {
+      setIsImportingCatalog(false);
+    }
+  }
+
+  async function applyCatalogImportFile(file: File) {
+    setIsImportingCatalog(true);
+    try {
+      setError(null);
+      const result = await applyCatalogImport(file);
+      setCatalogImportResult(result);
+      if (result.applied) {
+        await loadDashboard();
+      } else {
+        setError('Fix the spreadsheet issues before applying the import.');
+      }
+    } catch {
+      setError('Could not apply the catalog import.');
+    } finally {
+      setIsImportingCatalog(false);
     }
   }
 
@@ -773,9 +810,12 @@ export function useAppActions({
 
   return {
     assignFlagToSelectedPlant,
+    applyCatalogImportFile,
+    catalogImportResult,
     completeBulkTasks,
     completeTask,
     exportSpreadsheet,
+    isImportingCatalog,
     hasSearchedPlantInfo,
     isExporting,
     isSearchingPlantInfo,
@@ -806,6 +846,7 @@ export function useAppActions({
     saveResource,
     saveTaxon,
     searchTaxonInfo,
+    previewCatalogImportFile,
     setManagedPlantLocation,
     setManagedPlantTaxon,
     setPlantInfoQuery,

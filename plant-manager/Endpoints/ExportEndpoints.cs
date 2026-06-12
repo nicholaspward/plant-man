@@ -18,6 +18,7 @@ namespace plant_manager.Endpoints
                 await AddCareSchedulesSheet(workbook, db);
                 await AddActionLogsSheet(workbook, db);
                 await AddFlagsSheet(workbook, db);
+                await AddFlagDefinitionsSheet(workbook, db);
                 await AddGroupsSheet(workbook, db);
                 await AddTaxaSheet(workbook, db);
                 await AddLocationsSheet(workbook, db);
@@ -206,6 +207,25 @@ namespace plant_manager.Endpoints
             ], rows);
         }
 
+        private static async Task AddFlagDefinitionsSheet(XLWorkbook workbook, ApplicationDbContext db)
+        {
+            var rows = await db.PlantFlagDefinitions
+                .OrderBy(definition => definition.Name)
+                .Select(definition => new object?[]
+                {
+                    definition.Id,
+                    definition.Name,
+                    definition.Color
+                })
+                .ToListAsync();
+
+            AddSheet(workbook, "Flag Definitions", [
+                "ID",
+                "Name",
+                "Color"
+            ], rows);
+        }
+
         private static async Task AddGroupsSheet(XLWorkbook workbook, ApplicationDbContext db)
         {
             var groups = await db.PlantGroups
@@ -247,7 +267,11 @@ namespace plant_manager.Endpoints
                     taxon.Species,
                     taxon.Cultivar ?? "",
                     taxon.Variety ?? "",
-                    taxon.Authority ?? ""
+                    taxon.Authority ?? "",
+                    taxon.Family ?? "",
+                    taxon.CommonName ?? "",
+                    taxon.ExternalSource ?? "",
+                    taxon.ExternalId ?? ""
                 })
                 .ToListAsync();
 
@@ -258,7 +282,11 @@ namespace plant_manager.Endpoints
                 "Species",
                 "Cultivar",
                 "Variety",
-                "Authority"
+                "Authority",
+                "Family",
+                "Common Name",
+                "External Source",
+                "External ID"
             ], rows);
         }
 

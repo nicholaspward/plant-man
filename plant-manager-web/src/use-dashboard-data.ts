@@ -196,6 +196,7 @@ export function useDashboardData() {
     dueCount,
     error,
     isLoading,
+    loadDashboard,
     loadCareModel,
     loadFlagsAndPlants,
     loadGroupsAndPlants,

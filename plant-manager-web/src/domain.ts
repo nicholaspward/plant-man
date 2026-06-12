@@ -69,6 +69,32 @@ export type PlantInfoSearchResult = {
   commonNames: string[];
 };
 
+export type CatalogImportIssue = {
+  sheet: string;
+  row: number;
+  field: string;
+  message: string;
+  severity: string;
+};
+
+export type CatalogImportSheetSummary = {
+  sheet: string;
+  rows: number;
+  creates: number;
+  updates: number;
+  skips: number;
+};
+
+export type CatalogImportResult = {
+  applied: boolean;
+  canApply: boolean;
+  created: number;
+  updated: number;
+  skipped: number;
+  sheets: CatalogImportSheetSummary[];
+  issues: CatalogImportIssue[];
+};
+
 export type PlantLocation = {
   id: number;
   name: string;

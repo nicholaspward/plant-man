@@ -187,6 +187,29 @@ namespace plant_manager
         string? Notes,
         IReadOnlyList<ActionLogResourceRequest>? Resources);
 
+    public record CatalogImportIssue(
+        string Sheet,
+        int Row,
+        string Field,
+        string Message,
+        string Severity);
+
+    public record CatalogImportSheetSummary(
+        string Sheet,
+        int Rows,
+        int Creates,
+        int Updates,
+        int Skips);
+
+    public record CatalogImportResult(
+        bool Applied,
+        bool CanApply,
+        int Created,
+        int Updated,
+        int Skipped,
+        IReadOnlyList<CatalogImportSheetSummary> Sheets,
+        IReadOnlyList<CatalogImportIssue> Issues);
+
     public record PlantTaxonDto(
         int Id,
         string Name,
