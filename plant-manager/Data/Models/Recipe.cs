@@ -5,7 +5,6 @@ namespace plant_manager.Data.Models
         public int Id { get; set; }
 
         public string Name { get; set; } = string.Empty;
-        public string Type { get; set; } = string.Empty;
         public string MeasurementMode { get; set; } = "quantity";
         public int? OutputResourceId { get; set; }
         public string? Notes { get; set; }

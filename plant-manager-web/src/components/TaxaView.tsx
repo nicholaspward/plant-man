@@ -1,7 +1,8 @@
-import { Download, Edit3, Eye, Plus, Save, Search, Trash2, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import type { PlantInfoSearchResult, PlantTaxon } from '../domain';
 import type { TaxonFormState } from '../form-state';
 import { formatTaxon } from '../form-state';
+import { CatalogFilterSection, EntityList, RecordActions, SummaryActionButton, SummaryStrip } from './Ui';
 
 type TaxaViewProps = {
   activeTaxonName?: string;
@@ -64,26 +65,57 @@ export function TaxaView({
   onSearch,
   onSearchQueryChange,
 }: TaxaViewProps) {
+  const [filterQuery, setFilterQuery] = useState('');
+  const filteredTaxa = useMemo(() => {
+    const query = filterQuery.trim().toLowerCase();
+    if (!query) {
+      return taxa;
+    }
+
+    return taxa.filter((taxon) =>
+      `${formatTaxon(taxon)} ${taxon.commonName ?? ''} ${taxon.genus ?? ''} ${taxon.species ?? ''} ${taxon.cultivar ?? ''} ${taxon.variety ?? ''}`
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [filterQuery, taxa]);
+
   return (
     <>
-      <section className="summary-panel" aria-labelledby="taxa-summary-heading">
-        <div>
-          <p className="eyebrow">Taxon library</p>
-          <h2 id="taxa-summary-heading">
-            {isLoading ? 'Loading taxa' : `${taxa.length} taxa available`}
-          </h2>
-          <p>{error ?? 'Create and maintain the plant identities used by your collection.'}</p>
-        </div>
-        <button className="primary-action" type="button" onClick={onNew}>
-          <Plus size={18} />
-          New taxon
-        </button>
-      </section>
+      <SummaryStrip
+        ariaLabel="Taxa summary"
+        action={<SummaryActionButton onClick={onNew}>New</SummaryActionButton>}
+      >
+        <p>{error ?? 'Create and maintain the plant identities used by your collection.'}</p>
+      </SummaryStrip>
 
-      <section className="editor-panel" aria-labelledby="taxa-search-heading">
+      <CatalogFilterSection
+        value={filterQuery}
+        placeholder="Search taxa"
+        onChange={setFilterQuery}
+      />
+
+      <EntityList
+        ariaLabel="Taxa"
+        emptyMessage={taxa.length === 0 ? 'No taxa yet.' : 'No taxa match this search.'}
+        getKey={(taxon) => taxon.id}
+        isLoading={isLoading}
+        items={filteredTaxa}
+        renderActions={(taxon) => (
+          <RecordActions
+            deleteLabel={`Delete ${taxon.name}`}
+            editLabel={`Edit ${taxon.name}`}
+            viewLabel={`View ${taxon.name}`}
+            onDelete={() => onDelete(taxon)}
+            onEdit={() => onEdit(taxon)}
+            onView={() => onOpenDetail(taxon)}
+          />
+        )}
+        renderContent={(taxon) => <h3>{formatTaxon(taxon)}</h3>}
+      />
+
+      <section className="work-panel" aria-labelledby="taxa-search-heading">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Offline lookup</p>
             <h2 id="taxa-search-heading">Search plant info</h2>
           </div>
         </div>
@@ -104,7 +136,6 @@ export function TaxaView({
             />
           </label>
           <button className="primary-action" type="button" disabled={isSearching} onClick={() => onSearch()}>
-            <Search size={18} />
             {isSearching ? 'Searching' : 'Search'}
           </button>
         </div>
@@ -157,11 +188,9 @@ export function TaxaView({
                 </div>
                 <div className="row-actions">
                   <button className="small-action" type="button" onClick={() => onPrefillResult(result)}>
-                    <Edit3 size={16} />
                     Prefill
                   </button>
                   <button className="small-action" type="button" disabled={isSaving} onClick={() => onImportResult(result)}>
-                    <Download size={16} />
                     Import
                   </button>
                 </div>
@@ -174,18 +203,17 @@ export function TaxaView({
       </section>
 
       {selectedTaxon && !isEditorOpen ? (
-        <section className="editor-panel" aria-labelledby="taxon-detail-heading">
+        <section className="work-panel" aria-labelledby="taxon-detail-heading">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Taxon detail</p>
               <h2 id="taxon-detail-heading">{formatTaxon(selectedTaxon)}</h2>
             </div>
             <div className="row-actions">
               <button className="icon-button compact" type="button" aria-label={`Edit ${selectedTaxon.name}`} onClick={() => onEdit(selectedTaxon)}>
-                <Edit3 size={17} />
+                Edit
               </button>
               <button className="icon-button compact" type="button" aria-label="Close taxon detail" onClick={onCloseDetail}>
-                <X size={18} />
+                Close
               </button>
             </div>
           </div>
@@ -227,14 +255,13 @@ export function TaxaView({
       ) : null}
 
       {isEditorOpen ? (
-      <section className="editor-panel" aria-labelledby="taxon-editor-heading">
+      <section className="work-panel" aria-labelledby="taxon-editor-heading">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">{activeTaxonName ? 'Editing' : 'New taxon'}</p>
-            <h2 id="taxon-editor-heading">{activeTaxonName ?? 'Taxon details'}</h2>
+            <h2 id="taxon-editor-heading">{activeTaxonName ?? 'New taxon'}</h2>
           </div>
-          <button className="icon-button compact" type="button" aria-label="Clear form" onClick={onCancel}>
-            <X size={18} />
+          <button className="icon-button compact" type="button" aria-label="Close panel" onClick={onCancel}>
+            Close
           </button>
         </div>
 
@@ -299,8 +326,7 @@ export function TaxaView({
 
         <div className="form-actions">
           <button className="primary-action" type="button" disabled={isSaving} onClick={onSave}>
-            <Save size={18} />
-            {isSaving ? 'Saving' : 'Save taxon'}
+            {isSaving ? 'Saving' : 'Save'}
           </button>
           <button className="text-button" type="button" onClick={onCancel}>
             Cancel
@@ -309,36 +335,6 @@ export function TaxaView({
       </section>
       ) : null}
 
-      <section className="section" aria-labelledby="taxa-list-heading">
-        <div className="section-heading">
-          <h2 id="taxa-list-heading">All Taxa</h2>
-        </div>
-
-        <div className="plant-list">
-          {!isLoading && taxa.length === 0 ? (
-            <p className="empty-state">No taxa yet.</p>
-          ) : null}
-
-          {taxa.map((taxon) => (
-            <article className="plant-row" key={taxon.id}>
-              <div>
-                <h3>{formatTaxon(taxon)}</h3>
-              </div>
-              <div className="row-actions">
-                <button className="icon-button compact" type="button" aria-label={`View ${taxon.name}`} onClick={() => onOpenDetail(taxon)}>
-                  <Eye size={17} />
-                </button>
-                <button className="icon-button compact" type="button" aria-label={`Edit ${taxon.name}`} onClick={() => onEdit(taxon)}>
-                  <Edit3 size={17} />
-                </button>
-                <button className="icon-button compact danger" type="button" aria-label={`Delete ${taxon.name}`} onClick={() => onDelete(taxon)}>
-                  <Trash2 size={17} />
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
     </>
   );
 }

@@ -39,7 +39,6 @@ namespace plant_manager.Endpoints
                 var recipe = new Recipe
                 {
                     Name = name,
-                    Type = request.Type.Trim(),
                     MeasurementMode = validation.MeasurementMode,
                     OutputResource = validation.OutputResourceName is null
                         ? null
@@ -84,7 +83,6 @@ namespace plant_manager.Endpoints
                 }
 
                 recipe.Name = name;
-                recipe.Type = request.Type.Trim();
                 recipe.MeasurementMode = validation.MeasurementMode;
                 if (validation.OutputResourceName is null)
                 {
@@ -134,11 +132,6 @@ namespace plant_manager.Endpoints
             if (string.IsNullOrWhiteSpace(request.Name))
             {
                 return ([], "quantity", null, "Recipe name is required.");
-            }
-
-            if (string.IsNullOrWhiteSpace(request.Type))
-            {
-                return ([], "quantity", null, "Recipe type is required.");
             }
 
             var measurementMode = NormalizeMeasurementMode(request.MeasurementMode);
@@ -198,9 +191,9 @@ namespace plant_manager.Endpoints
             }
 
             if (measurementMode == "bakers_percent"
-                && !requestedComponents.Any(component => component.Quantity == 100))
+                && requestedComponents.Count(component => component.Quantity == 100) != 1)
             {
-                return ([], measurementMode, outputResourceName, "Baker's percent recipes need one base component at 100%.");
+                return ([], measurementMode, outputResourceName, "Baker's percent recipes need exactly one base component at 100%.");
             }
 
             var resourceIds = requestedComponents

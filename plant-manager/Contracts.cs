@@ -99,7 +99,6 @@ namespace plant_manager
 
     public record SaveRecipeRequest(
         string Name,
-        string Type,
         string? MeasurementMode,
         string? OutputResourceName,
         IReadOnlyList<SaveRecipeComponentRequest>? Components,
@@ -316,11 +315,10 @@ namespace plant_manager
     public record RecipeSummaryDto(
         int Id,
         string Name,
-        string Type,
         string MeasurementMode)
     {
         public static RecipeSummaryDto FromRecipe(Recipe recipe) =>
-            new(recipe.Id, recipe.Name, recipe.Type, recipe.MeasurementMode);
+            new(recipe.Id, recipe.Name, recipe.MeasurementMode);
     }
 
     public record CareActivityDto(
@@ -365,7 +363,6 @@ namespace plant_manager
     public record RecipeDto(
         int Id,
         string Name,
-        string Type,
         string MeasurementMode,
         ActionResourceSummaryDto? OutputResource,
         IReadOnlyList<RecipeComponentDto> Components,
@@ -375,7 +372,6 @@ namespace plant_manager
             new(
                 recipe.Id,
                 recipe.Name,
-                recipe.Type,
                 recipe.MeasurementMode,
                 recipe.OutputResource is null
                     ? null

@@ -180,7 +180,6 @@ p {
   background: var(--side);
 }
 
-.catalog-sidebar h2,
 .catalog-help h3 {
   margin: 0 0 8px;
   color: #24342c;
@@ -283,21 +282,6 @@ p {
   background: var(--panel);
 }
 
-.catalog-page-title {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.catalog-page-title h1 {
-  margin: 0 0 6px;
-  color: #24342c;
-  font-weight: 600;
-}
-
 .content {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -306,15 +290,8 @@ p {
   margin: 0;
 }
 
-.eyebrow {
-  margin: 0 0 3px;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 500;
-  text-transform: uppercase;
-}
-
 .summary-panel,
+.work-panel,
 .editor-panel,
 .plant-card,
 .plant-row,
@@ -331,12 +308,6 @@ p {
   align-items: center;
   gap: 10px;
   padding: 12px 14px;
-  border-left: 4px solid var(--link);
-}
-
-.summary-panel h2 {
-  margin-bottom: 3px;
-  font-size: 1.25rem;
 }
 
 .summary-panel p {
@@ -352,12 +323,15 @@ p {
   gap: 8px;
 }
 
+.content-section,
 .section,
+.work-panel,
 .editor-panel {
   display: grid;
   gap: 10px;
 }
 
+.work-panel,
 .editor-panel {
   padding: 12px;
   background: #fbfaf4;
@@ -402,6 +376,10 @@ p {
   min-width: 62px;
   min-height: 28px;
   padding: 0 8px;
+}
+
+.small-action.danger {
+  color: var(--danger);
 }
 
 .icon-button {
@@ -806,7 +784,7 @@ dd {
   font-weight: 500;
 }
 
-.plant-form input,
+.plant-form input:not([type='radio']):not([type='checkbox']),
 .plant-form select,
 .plant-form textarea,
 .search-row input,
@@ -855,12 +833,12 @@ dd {
   grid-template-columns: minmax(0, 1fr);
 }
 
-.preserve-lines {
-  white-space: pre-wrap;
+.plant-editor-actions {
+  justify-items: end;
 }
 
-.plant-form input[type='color'] {
-  padding: 2px;
+.preserve-lines {
+  white-space: pre-wrap;
 }
 
 .plant-form .toggle-field,
@@ -998,6 +976,24 @@ dd {
   grid-template-columns: minmax(160px, 1.2fr) minmax(70px, 90px) minmax(140px, 1fr) auto;
 }
 
+.recipe-resource-row-base {
+  grid-template-columns: minmax(48px, 60px) minmax(160px, 1.2fr) minmax(70px, 90px) minmax(140px, 1fr) auto;
+}
+
+.recipe-base-radio {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+}
+
+.recipe-base-radio input {
+  width: 14px;
+  height: 14px;
+  min-height: 0;
+  margin: 0;
+}
+
 .log-resource-header,
 .log-resource-row {
   grid-template-columns: minmax(160px, 1fr) minmax(70px, 90px) minmax(80px, 110px) auto;
@@ -1041,8 +1037,8 @@ dd {
   gap: 2px;
   margin-top: 10px;
   padding: 8px;
-  border-left: 3px solid var(--link);
-  border-radius: 0 6px 6px 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
   background: #f3efe3;
 }
 
@@ -1219,7 +1215,7 @@ dd {
 }
 
 .plant-detail-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
 }
 
@@ -1375,6 +1371,62 @@ dd {
   line-height: 1;
 }
 
+.flag-theme-picker {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.flag-theme-picker legend {
+  margin-bottom: 5px;
+  color: #4f5f54;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.flag-theme-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 6px;
+}
+
+.flag-theme-option {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fffdf7;
+  color: #24342c;
+  font-size: 0.82rem;
+}
+
+.flag-theme-option:has(input:checked) {
+  border-color: #8f806d;
+  background: #f2efe6;
+}
+
+.flag-theme-option input {
+  width: 14px;
+  height: 14px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.flag-theme-swatch {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  border: 1px solid #777;
+  border-radius: 999px;
+}
+
 .flag-assignment-form {
   margin-top: 8px;
   padding: 8px;
@@ -1488,10 +1540,6 @@ dd {
 
   .week-day {
     flex: 0 0 78px;
-  }
-
-  .catalog-page-title {
-    display: block;
   }
 
   .summary-panel,

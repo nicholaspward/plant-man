@@ -1,6 +1,6 @@
-import { Download, FileSearch, Upload } from 'lucide-react';
 import { useState } from 'react';
 import type { CatalogImportResult } from '../domain';
+import { SummaryStrip } from './Ui';
 
 type ImportExportViewProps = {
   catalogImportResult: CatalogImportResult | null;
@@ -29,26 +29,22 @@ export function ImportExportView({
 
   return (
     <>
-      <section className="summary-panel" aria-labelledby="import-export-summary-heading">
-        <div>
-          <p className="eyebrow">Data movement</p>
-          <h2 id="import-export-summary-heading">Import / Export</h2>
-          <p>{error ?? 'Move catalog data in and out of Plant-Man spreadsheets.'}</p>
-        </div>
-        <div className="summary-actions">
+      <SummaryStrip
+        ariaLabel="Import and export summary"
+        action={(
+          <div className="summary-actions">
           <button className="primary-action" type="button" disabled={isExporting} onClick={onExport}>
-            <Download size={18} />
-            {isExporting ? 'Exporting' : 'Export spreadsheet'}
+            {isExporting ? 'Exporting' : 'Export'}
           </button>
-        </div>
-      </section>
-
-      <section className="editor-panel catalog-import-panel" aria-labelledby="catalog-import-heading">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Catalogs</p>
-            <h2 id="catalog-import-heading">Catalog Import</h2>
           </div>
+        )}
+      >
+        <p>{error ?? 'Move catalog data in and out of Plant-Man spreadsheets.'}</p>
+      </SummaryStrip>
+
+      <section className="work-panel catalog-import-panel" aria-labelledby="catalog-import-heading">
+        <div className="section-heading">
+          <h2 id="catalog-import-heading">Spreadsheet import</h2>
           <div className="row-actions">
             <button
               className="small-action"
@@ -61,7 +57,6 @@ export function ImportExportView({
                 }
               }}
             >
-              <FileSearch size={16} />
               Preview
             </button>
             <button
@@ -70,7 +65,6 @@ export function ImportExportView({
               disabled={isImportingCatalog || !canApplyPreviewedFile}
               onClick={() => catalogImportFile ? onApplyCatalogImport(catalogImportFile) : undefined}
             >
-              <Upload size={16} />
               Apply
             </button>
           </div>

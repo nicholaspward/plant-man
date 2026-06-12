@@ -385,7 +385,6 @@ namespace plant_manager.Endpoints
                 {
                     recipe.Id,
                     recipe.Name,
-                    recipe.Type,
                     recipe.MeasurementMode,
                     recipe.OutputResource == null ? "" : recipe.OutputResource.Name,
                     string.Join(", ", recipe.Components
@@ -398,7 +397,6 @@ namespace plant_manager.Endpoints
             AddSheet(workbook, "Recipes", [
                 "ID",
                 "Name",
-                "Type",
                 "Measurement Mode",
                 "Output Resource",
                 "Components",

@@ -1,4 +1,3 @@
-import { Eye } from 'lucide-react';
 import type { CareStatus, Plant } from '../domain';
 
 const statusLabel: Record<CareStatus, string> = {
@@ -61,7 +60,7 @@ export function PlantCard({ plant, onOpen }: PlantCardProps) {
             aria-label={`View ${plant.nickname}`}
             onClick={() => onOpen(plant)}
           >
-            <Eye size={17} />
+            View
           </button>
         ) : null}
       </div>

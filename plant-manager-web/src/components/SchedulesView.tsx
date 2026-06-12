@@ -1,7 +1,7 @@
-import { CalendarClock, Save, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { CareActivity, Plant, PlantGroup } from '../domain';
 import type { BulkScheduleFormState } from '../form-state';
+import { SummaryStrip } from './Ui';
 
 type SchedulesViewProps = {
   activities: CareActivity[];
@@ -65,24 +65,16 @@ export function SchedulesView({
 
   return (
     <>
-      <section className="summary-panel" aria-labelledby="schedules-summary-heading">
-        <div>
-          <p className="eyebrow">Care schedules</p>
-          <h2 id="schedules-summary-heading">
-            {isLoading ? 'Loading schedules' : 'Scheduler'}
-          </h2>
-          <p>{error ?? 'Review current schedules, choose target plants, and apply care intervals.'}</p>
-        </div>
-      </section>
+      <SummaryStrip ariaLabel="Schedules summary">
+        <p>{error ?? 'Review current schedules, choose target plants, and apply care intervals.'}</p>
+      </SummaryStrip>
 
-      <section className="editor-panel" aria-labelledby="bulk-schedule-heading">
+      <section className="work-panel" aria-labelledby="bulk-schedule-heading">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Schedule rule</p>
             <h2 id="bulk-schedule-heading">Apply activity interval</h2>
           </div>
           <div className="schedule-count">
-            <CalendarClock size={16} />
             <span>{selectedGroup ? `${selectedGroup.name}: ${selectedPlants.length} plants` : `${selectedPlants.length} selected`}</span>
           </div>
         </div>
@@ -261,10 +253,9 @@ export function SchedulesView({
           </div>
         ) : null}
 
-        <div className="section schedule-targets" aria-labelledby="bulk-schedule-plants-heading">
+        <div className="work-panel schedule-targets" aria-labelledby="bulk-schedule-plants-heading">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Targets</p>
               <h2 id="bulk-schedule-plants-heading">Plants</h2>
             </div>
             <div className="row-actions">
@@ -341,7 +332,6 @@ export function SchedulesView({
               setSelectedGroupId('');
             }}
           >
-            <Save size={18} />
             {isSaving ? 'Saving' : selectedGroup ? `Apply to ${selectedGroup.name}` : `Apply to ${form.plantIds.length} plants`}
           </button>
           <button
@@ -353,16 +343,14 @@ export function SchedulesView({
               setSelectedGroupId('');
             }}
           >
-            <Trash2 size={16} />
             Remove from {form.plantIds.length} plants
           </button>
         </div>
       </section>
 
-      <section className="section" aria-labelledby="current-schedules-heading">
+      <section className="work-panel" aria-labelledby="current-schedules-heading">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Current state</p>
             <h2 id="current-schedules-heading">Selected Plant Schedules</h2>
           </div>
         </div>

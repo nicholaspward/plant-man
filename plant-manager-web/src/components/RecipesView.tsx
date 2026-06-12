@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Edit3, Eye, Plus, Save, Trash2, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import type { ActionResource, Recipe } from '../domain';
 import type { RecipeFormState } from '../form-state';
+import { CatalogFilterSection, EntityList, RecordActions, SummaryActionButton, SummaryStrip } from './Ui';
 
 type RecipesViewProps = {
   activeRecipeName?: string;
@@ -46,6 +46,19 @@ export function RecipesView({
   onSave,
 }: RecipesViewProps) {
   const [calculatorAmounts, setCalculatorAmounts] = useState<Record<number, string>>({});
+  const [filterQuery, setFilterQuery] = useState('');
+  const filteredRecipes = useMemo(() => {
+    const query = filterQuery.trim().toLowerCase();
+    if (!query) {
+      return recipes;
+    }
+
+    return recipes.filter((recipe) =>
+      `${recipe.name} ${formatMeasurementMode(recipe.measurementMode)} ${formatRecipeSummary(recipe)}`
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [filterQuery, recipes]);
 
   function updateComponent(index: number, nextComponent: RecipeFormState['components'][number]) {
     onFieldChange(
@@ -55,10 +68,35 @@ export function RecipesView({
   }
 
   function addComponent() {
+    const shouldSetAsBase = form.measurementMode === 'bakers_percent'
+      && getBakersBaseIndex(form.components) === -1;
+
     onFieldChange('components', [
       ...form.components,
-      { actionResourceId: '', quantity: '', unit: '', notes: '' },
+      { actionResourceId: '', quantity: shouldSetAsBase ? '100' : '', unit: '', notes: '' },
     ]);
+  }
+
+  function updateMeasurementMode(nextMode: RecipeFormState['measurementMode']) {
+    if (nextMode === 'bakers_percent' && form.components.length > 0 && getBakersBaseIndex(form.components) === -1) {
+      onFieldChange(
+        'components',
+        form.components.map((component, index) => index === 0 ? { ...component, quantity: '100' } : component),
+      );
+    }
+
+    onFieldChange('measurementMode', nextMode);
+  }
+
+  function setBakersBase(componentIndex: number) {
+    onFieldChange(
+      'components',
+      form.components.map((component, index) => index === componentIndex
+        ? { ...component, quantity: '100' }
+        : component.quantity.trim() === '100'
+          ? { ...component, quantity: '' }
+          : component),
+    );
   }
 
   function hasIncompleteComponents() {
@@ -70,15 +108,20 @@ export function RecipesView({
       return false;
     }
 
-    if (form.components.some((component) => !component.quantity.trim())) {
-      return true;
-    }
-
     if (form.measurementMode === 'total_percent') {
+      if (form.components.some((component) => !component.quantity.trim())) {
+        return true;
+      }
+
       return getPercentTotal(form) !== 100;
     }
 
-    return !form.components.some((component) => Number(component.quantity) === 100);
+    const baseIndex = getBakersBaseIndex(form.components);
+
+    return baseIndex === -1
+      || form.components.some((component, index) =>
+        index !== baseIndex && (!component.quantity.trim() || Number(component.quantity) === 100)
+      );
   }
 
   const isPercentRecipe = form.measurementMode !== 'quantity';
@@ -89,41 +132,59 @@ export function RecipesView({
 
   return (
     <>
-      <section className="summary-panel" aria-labelledby="recipes-summary-heading">
-        <div>
-          <p className="eyebrow">Recipe catalog</p>
-          <h2 id="recipes-summary-heading">
-            {isLoading ? 'Loading recipes' : `${recipes.length} recipes`}
-          </h2>
-          <p>{error ?? 'Build reusable mixes and solutions, then create the resource they produce.'}</p>
-        </div>
-        <button className="primary-action" type="button" onClick={onNew}>
-          <Plus size={18} />
-          New recipe
-        </button>
-      </section>
+      <SummaryStrip
+        ariaLabel="Recipes summary"
+        action={<SummaryActionButton onClick={onNew}>New</SummaryActionButton>}
+      >
+        <p>{error ?? 'Build reusable mixes and solutions, then create the resource they produce.'}</p>
+      </SummaryStrip>
+
+      <CatalogFilterSection
+        value={filterQuery}
+        placeholder="Search recipes"
+        onChange={setFilterQuery}
+      />
+
+      <EntityList
+        ariaLabel="Recipes"
+        emptyMessage={recipes.length === 0 ? 'No recipes yet.' : 'No recipes match this search.'}
+        getKey={(recipe) => recipe.id}
+        isLoading={isLoading}
+        items={filteredRecipes}
+        renderActions={(recipe) => (
+          <RecordActions
+            deleteLabel={`Delete ${recipe.name}`}
+            editLabel={`Edit ${recipe.name}`}
+            viewLabel={`View ${recipe.name}`}
+            onDelete={() => onDelete(recipe)}
+            onEdit={() => onEdit(recipe)}
+            onView={() => onOpenDetail(recipe)}
+          />
+        )}
+        renderContent={(recipe) => (
+          <>
+            <h3>{recipe.name}</h3>
+            <p>{formatMeasurementMode(recipe.measurementMode)} - {formatRecipeSummary(recipe)}</p>
+          </>
+        )}
+      />
 
       {selectedRecipe && !isEditorOpen ? (
-        <section className="editor-panel" aria-labelledby="recipe-detail-heading">
+        <section className="work-panel" aria-labelledby="recipe-detail-heading">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Recipe detail</p>
               <h2 id="recipe-detail-heading">{selectedRecipe.name}</h2>
             </div>
             <div className="row-actions">
               <button className="icon-button compact" type="button" aria-label={`Edit ${selectedRecipe.name}`} onClick={() => onEdit(selectedRecipe)}>
-                <Edit3 size={17} />
+                Edit
               </button>
               <button className="icon-button compact" type="button" aria-label="Close recipe detail" onClick={onCloseDetail}>
-                <X size={18} />
+                Close
               </button>
             </div>
           </div>
           <div className="plant-detail-meta compact-meta">
-            <div>
-              <span>Type</span>
-              <strong>{selectedRecipe.type}</strong>
-            </div>
             <div>
               <span>Mode</span>
               <strong>{formatMeasurementMode(selectedRecipe.measurementMode)}</strong>
@@ -153,14 +214,13 @@ export function RecipesView({
       ) : null}
 
       {isEditorOpen ? (
-        <section className="editor-panel" aria-labelledby="recipe-editor-heading">
+        <section className="work-panel" aria-labelledby="recipe-editor-heading">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">{activeRecipeName ? 'Editing' : 'New recipe'}</p>
-              <h2 id="recipe-editor-heading">{activeRecipeName ?? 'Recipe details'}</h2>
+              <h2 id="recipe-editor-heading">{activeRecipeName ?? 'New recipe'}</h2>
             </div>
-            <button className="icon-button compact" type="button" aria-label="Clear form" onClick={onCancel}>
-              <X size={18} />
+            <button className="icon-button compact" type="button" aria-label="Close panel" onClick={onCancel}>
+              Close
             </button>
           </div>
 
@@ -173,22 +233,10 @@ export function RecipesView({
               />
             </label>
             <label>
-              Type
-              <select
-                value={form.type}
-                onChange={(event) => onFieldChange('type', event.target.value)}
-              >
-                <option value="Soil mixture">Soil mixture</option>
-                <option value="Fertilizer solution">Fertilizer solution</option>
-                <option value="Treatment">Treatment</option>
-                <option value="Other">Other</option>
-              </select>
-            </label>
-            <label>
               Mode
               <select
                 value={form.measurementMode}
-                onChange={(event) => onFieldChange('measurementMode', event.target.value as RecipeFormState['measurementMode'])}
+                onChange={(event) => updateMeasurementMode(event.target.value as RecipeFormState['measurementMode'])}
               >
                 <option value="quantity">Quantity</option>
                 <option value="total_percent">Percent of total</option>
@@ -208,9 +256,10 @@ export function RecipesView({
               {form.components.length === 0 ? (
                 <p className="empty-state">No components configured.</p>
               ) : (
-                <div className={`activity-resource-header recipe-resource-header ${isPercentRecipe ? 'recipe-resource-row-percent' : ''}`} aria-hidden="true">
+                <div className={`activity-resource-header recipe-resource-header ${getRecipeResourceRowClass(form.measurementMode)}`} aria-hidden="true">
+                  {form.measurementMode === 'bakers_percent' ? <span>Base</span> : null}
                   <span>Resource</span>
-                  <span>{amountHeading}</span>
+                  {isPercentRecipe ? <span>{amountHeading}</span> : <span>{amountHeading}</span>}
                   {isPercentRecipe ? null : <span>Unit</span>}
                   <span>Notes</span>
                   <span />
@@ -223,9 +272,22 @@ export function RecipesView({
                     .filter((_, index) => index !== componentIndex)
                     .map((item) => item.actionResourceId),
                 );
+                const baseIndex = getBakersBaseIndex(form.components);
+                const isBakersBase = form.measurementMode === 'bakers_percent' && componentIndex === baseIndex;
 
                 return (
-                  <div className={`activity-resource-row recipe-resource-row ${isPercentRecipe ? 'recipe-resource-row-percent' : ''}`} key={`${component.actionResourceId}-${componentIndex}`}>
+                  <div className={`activity-resource-row recipe-resource-row ${getRecipeResourceRowClass(form.measurementMode)}`} key={`${component.actionResourceId}-${componentIndex}`}>
+                    {form.measurementMode === 'bakers_percent' ? (
+                      <label className="recipe-base-radio">
+                        <input
+                          checked={isBakersBase}
+                          type="radio"
+                          name="recipe-base-component"
+                          onChange={() => setBakersBase(componentIndex)}
+                        />
+                        <span className="sr-only">Base component</span>
+                      </label>
+                    ) : null}
                     <select
                       aria-label="Component resource"
                       value={component.actionResourceId}
@@ -245,10 +307,11 @@ export function RecipesView({
                     </select>
                     <input
                       aria-label={amountHeading}
+                      disabled={isBakersBase}
                       min="0"
                       step="0.01"
                       type="number"
-                      value={component.quantity}
+                      value={isBakersBase ? '100' : component.quantity}
                       onChange={(event) => updateComponent(
                         componentIndex,
                         { ...component, quantity: event.target.value },
@@ -281,7 +344,7 @@ export function RecipesView({
                         form.components.filter((_, index) => index !== componentIndex),
                       )}
                     >
-                      <Trash2 size={17} />
+                      Remove
                     </button>
                   </div>
                 );
@@ -293,7 +356,6 @@ export function RecipesView({
                 disabled={resources.length === 0}
                 onClick={addComponent}
               >
-                <Plus size={16} />
                 Add component
               </button>
               {form.measurementMode === 'total_percent' ? (
@@ -311,8 +373,7 @@ export function RecipesView({
 
           <div className="form-actions">
             <button className="primary-action" type="button" disabled={isSaving || !form.outputResourceName.trim() || form.components.length === 0 || hasIncompleteComponents()} onClick={onSave}>
-              <Save size={18} />
-              {isSaving ? 'Saving' : 'Save recipe'}
+              {isSaving ? 'Saving' : 'Save'}
             </button>
             <button className="text-button" type="button" onClick={onCancel}>
               Cancel
@@ -321,37 +382,6 @@ export function RecipesView({
         </section>
       ) : null}
 
-      <section className="section" aria-labelledby="recipes-list-heading">
-        <div className="section-heading">
-          <h2 id="recipes-list-heading">All Recipes</h2>
-        </div>
-
-        <div className="plant-list">
-          {!isLoading && recipes.length === 0 ? (
-            <p className="empty-state">No recipes yet.</p>
-          ) : null}
-
-          {recipes.map((recipe) => (
-            <article className="plant-row" key={recipe.id}>
-              <div>
-                <h3>{recipe.name}</h3>
-                <p>{recipe.type} - {formatMeasurementMode(recipe.measurementMode)} - {formatRecipeSummary(recipe)}</p>
-              </div>
-              <div className="row-actions">
-                <button className="icon-button compact" type="button" aria-label={`View ${recipe.name}`} onClick={() => onOpenDetail(recipe)}>
-                  <Eye size={17} />
-                </button>
-                <button className="icon-button compact" type="button" aria-label={`Edit ${recipe.name}`} onClick={() => onEdit(recipe)}>
-                  <Edit3 size={17} />
-                </button>
-                <button className="icon-button compact danger" type="button" aria-label={`Delete ${recipe.name}`} onClick={() => onDelete(recipe)}>
-                  <Trash2 size={17} />
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
     </>
   );
 }
@@ -545,6 +575,21 @@ function getAmountHeading(measurementMode: RecipeFormState['measurementMode']) {
     default:
       return 'Qty';
   }
+}
+
+function getRecipeResourceRowClass(measurementMode: RecipeFormState['measurementMode']) {
+  switch (measurementMode) {
+    case 'bakers_percent':
+      return 'recipe-resource-row-base';
+    case 'total_percent':
+      return 'recipe-resource-row-percent';
+    default:
+      return '';
+  }
+}
+
+function getBakersBaseIndex(components: RecipeFormState['components']) {
+  return components.findIndex((component) => Number(component.quantity) === 100);
 }
 
 function getPercentTotal(form: RecipeFormState) {

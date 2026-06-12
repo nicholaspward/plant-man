@@ -7,7 +7,6 @@ import { HomeView } from './components/HomeView';
 import { ImportExportView } from './components/ImportExportView';
 import { LocationsView } from './components/LocationsView';
 import { PlantManagementView } from './components/PlantManagementView';
-import { PlantsView } from './components/PlantsView';
 import { RecipesView } from './components/RecipesView';
 import { ResourcesView } from './components/ResourcesView';
 import { SchedulesView } from './components/SchedulesView';
@@ -90,7 +89,6 @@ export function App() {
     isTaxonEditorOpen,
     locationForm,
     openPlantDetail,
-    openPlantReadOnlyDetail,
     plantFlagForm,
     plantGroupForm,
     recipeForm,
@@ -100,7 +98,6 @@ export function App() {
     selectedFlagDefinition,
     selectedLocation,
     selectedPlant,
-    selectedPlantId,
     selectedRecipe,
     selectedResource,
     selectedTaxon,
@@ -127,7 +124,6 @@ export function App() {
     startEditingActivity,
     startEditingFlagDefinition,
     startEditingLocation,
-    startEditingPlant,
     startEditingPlantGroup,
     startEditingRecipe,
     startEditingResource,
@@ -184,8 +180,6 @@ export function App() {
     saveTaxon,
     searchTaxonInfo,
     previewCatalogImportFile,
-    setManagedPlantLocation,
-    setManagedPlantTaxon,
     setPlantInfoQuery,
   } = useAppActions({
     editors,
@@ -216,7 +210,6 @@ export function App() {
 
       <div className="catalog-layout">
         <aside className="catalog-sidebar">
-          <h2>Workbench</h2>
           <nav className="catalog-nav" aria-label="Primary navigation">
             <div className="nav-group">
               <h3>Operations</h3>
@@ -226,13 +219,6 @@ export function App() {
                 onClick={() => setView('home')}
               >
                 Dashboard
-              </button>
-              <button
-                type="button"
-                aria-current={view === 'plants' ? 'page' : undefined}
-                onClick={() => setView('plants')}
-              >
-                Plants
               </button>
               <button
                 type="button"
@@ -325,6 +311,7 @@ export function App() {
           <section className="catalog-help" aria-label="Catalog status">
             <h3>Catalog Status</h3>
             <p>{dueCount} due</p>
+            <p>{plantTaxa.length} taxa</p>
             <p>{plantLocations.length} locations</p>
             <p>{plantGroups.length} groups</p>
             <p>{careActivities.length} activities</p>
@@ -336,34 +323,13 @@ export function App() {
         </aside>
 
         <div className="catalog-main">
-          <div className="catalog-page-title">
-            <p className="eyebrow">{getViewEyebrow(view)}</p>
-            <h1>{getViewTitle(view)}</h1>
-          </div>
-
           <main className="content">
-            {view === 'plants' ? (
-              <PlantsView
+            {view === 'plant-management' ? (
+              <PlantManagementView
                 activePlantName={activePlant?.nickname}
                 error={error}
                 form={form}
-                isLoading={isLoading}
                 isPlantEditorOpen={isPlantEditorOpen}
-                isSaving={isSaving}
-                plants={plants}
-                selectedPlant={selectedPlant}
-                onCancel={cancelEditing}
-                onCloseDetail={() => setSelectedPlantId(null)}
-                onDelete={(plant) => void removePlant(plant)}
-                onEdit={startEditingPlant}
-                onFieldChange={updateForm}
-                onNew={startAddingPlant}
-                onOpenDetail={openPlantReadOnlyDetail}
-                onSave={() => void savePlant()}
-              />
-            ) : view === 'plant-management' ? (
-              <PlantManagementView
-                error={error}
                 isLoading={isLoading}
                 isSaving={isSaving}
                 plantFlagDefinitions={plantFlagDefinitions}
@@ -372,14 +338,16 @@ export function App() {
                 plantTaxa={plantTaxa}
                 plants={plants}
                 selectedPlant={selectedPlant}
-                selectedPlantId={selectedPlantId}
                 onAssignFlag={() => void assignFlagToSelectedPlant()}
+                onCancelPlant={cancelEditing}
+                onDeletePlant={(plant) => void removePlant(plant)}
                 onFieldChange={updatePlantFlagForm}
+                onNewPlant={startAddingPlant}
+                onPlantFieldChange={updateForm}
                 onRemoveFlag={(flag) => void removeAssignedPlantFlag(flag)}
                 onResolveFlag={(flag) => void resolveAssignedPlantFlag(flag)}
+                onSavePlant={() => void savePlant()}
                 onSelectPlant={selectManagedPlant}
-                onSetLocation={setManagedPlantLocation}
-                onSetTaxon={setManagedPlantTaxon}
               />
             ) : view === 'import-export' ? (
               <ImportExportView
@@ -568,7 +536,6 @@ export function App() {
             ) : (
               <HomeView
                 careTasks={careTasks}
-                dueCount={dueCount}
                 error={error}
                 groups={plantGroups}
                 isLoading={isLoading}
@@ -583,60 +550,4 @@ export function App() {
       </div>
     </div>
   );
-}
-
-function getViewEyebrow(view: View) {
-  switch (view) {
-    case 'home':
-      return 'Operations';
-    case 'plants':
-    case 'plant-management':
-    case 'import-export':
-      return 'Operations';
-    case 'schedules':
-      return 'Care';
-    case 'taxa':
-    case 'locations':
-    case 'groups':
-    case 'resources':
-    case 'recipes':
-    case 'actions':
-    case 'flags':
-      return 'Catalogs';
-    case 'activities':
-      return 'Care';
-    default:
-      return 'Operations';
-  }
-}
-
-function getViewTitle(view: View) {
-  switch (view) {
-    case 'plants':
-      return 'Plants';
-    case 'plant-management':
-      return 'Plant Management';
-    case 'import-export':
-      return 'Import / Export';
-    case 'schedules':
-      return 'Scheduler';
-    case 'taxa':
-      return 'Plant Taxa';
-    case 'locations':
-      return 'Locations';
-    case 'groups':
-      return 'Groups';
-    case 'actions':
-      return 'Actions';
-    case 'activities':
-      return 'Care Activities';
-    case 'resources':
-      return 'Resources';
-    case 'recipes':
-      return 'Recipes';
-    case 'flags':
-      return 'Plant Flags';
-    default:
-      return 'Dashboard';
-  }
 }

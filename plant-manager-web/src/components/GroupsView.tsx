@@ -1,6 +1,7 @@
-import { Edit3, Plus, Save, Trash2, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import type { Plant, PlantGroup } from '../domain';
 import type { PlantGroupFormState } from '../form-state';
+import { CatalogFilterSection, ClosePanelButton, EntityList, RecordActions, SummaryActionButton, SummaryStrip } from './Ui';
 
 type GroupsViewProps = {
   activeGroupName?: string;
@@ -36,33 +37,62 @@ export function GroupsView({
   onSave,
 }: GroupsViewProps) {
   const selectedPlantIds = new Set(form.plantIds);
+  const [filterQuery, setFilterQuery] = useState('');
+  const filteredGroups = useMemo(() => {
+    const query = filterQuery.trim().toLowerCase();
+    if (!query) {
+      return groups;
+    }
+
+    return groups.filter((group) =>
+      `${group.name} ${group.notes ?? ''} ${group.plants.map((plant) => plant.nickname).join(' ')}`.toLowerCase().includes(query)
+    );
+  }, [filterQuery, groups]);
 
   return (
     <>
-      <section className="summary-panel" aria-labelledby="groups-summary-heading">
-        <div>
-          <p className="eyebrow">Plant groups</p>
-          <h2 id="groups-summary-heading">
-            {isLoading ? 'Loading groups' : `${groups.length} groups`}
-          </h2>
-          <p>{error ?? 'Organize plants for scheduling and care logging.'}</p>
-        </div>
-        <button className="primary-action" type="button" onClick={onNew}>
-          <Plus size={18} />
-          New group
-        </button>
-      </section>
+      <SummaryStrip
+        ariaLabel="Groups summary"
+        action={<SummaryActionButton onClick={onNew}>New</SummaryActionButton>}
+      >
+        <p>{error ?? 'Organize plants for scheduling and care logging.'}</p>
+      </SummaryStrip>
+
+      <CatalogFilterSection
+        value={filterQuery}
+        placeholder="Search groups"
+        onChange={setFilterQuery}
+      />
+
+      <EntityList
+        ariaLabel="Groups"
+        emptyMessage={groups.length === 0 ? 'No groups yet.' : 'No groups match this search.'}
+        getKey={(group) => group.id}
+        isLoading={isLoading}
+        items={filteredGroups}
+        renderActions={(group) => (
+          <RecordActions
+            deleteLabel={`Delete ${group.name}`}
+            editLabel={`Edit ${group.name}`}
+            onDelete={() => onDelete(group)}
+            onEdit={() => onEdit(group)}
+          />
+        )}
+        renderContent={(group) => (
+          <>
+            <h3>{group.name}</h3>
+            <p>{group.plants.length} plants{group.notes ? ` - ${group.notes}` : ''}</p>
+          </>
+        )}
+      />
 
       {isEditorOpen ? (
-        <section className="editor-panel" aria-labelledby="group-editor-heading">
+        <section className="work-panel" aria-labelledby="group-editor-heading">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">{activeGroupName ? 'Editing' : 'New group'}</p>
-              <h2 id="group-editor-heading">{activeGroupName ?? 'Group details'}</h2>
+              <h2 id="group-editor-heading">{activeGroupName ?? 'New group'}</h2>
             </div>
-            <button className="icon-button compact" type="button" aria-label="Clear form" onClick={onCancel}>
-              <X size={18} />
-            </button>
+            <ClosePanelButton onClick={onCancel} />
           </div>
 
           <div className="plant-form">
@@ -116,8 +146,7 @@ export function GroupsView({
 
           <div className="form-actions">
             <button className="primary-action" type="button" disabled={isSaving || !form.name.trim()} onClick={onSave}>
-              <Save size={18} />
-              {isSaving ? 'Saving' : 'Save group'}
+              {isSaving ? 'Saving' : 'Save'}
             </button>
             <button className="text-button" type="button" onClick={onCancel}>
               Cancel
@@ -126,34 +155,6 @@ export function GroupsView({
         </section>
       ) : null}
 
-      <section className="section" aria-labelledby="groups-list-heading">
-        <div className="section-heading">
-          <h2 id="groups-list-heading">All Groups</h2>
-        </div>
-
-        <div className="plant-list">
-          {!isLoading && groups.length === 0 ? (
-            <p className="empty-state">No groups yet.</p>
-          ) : null}
-
-          {groups.map((group) => (
-            <article className="plant-row" key={group.id}>
-              <div>
-                <h3>{group.name}</h3>
-                <p>{group.plants.length} plants{group.notes ? ` - ${group.notes}` : ''}</p>
-              </div>
-              <div className="row-actions">
-                <button className="icon-button compact" type="button" aria-label={`Edit ${group.name}`} onClick={() => onEdit(group)}>
-                  <Edit3 size={17} />
-                </button>
-                <button className="icon-button compact danger" type="button" aria-label={`Delete ${group.name}`} onClick={() => onDelete(group)}>
-                  <Trash2 size={17} />
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
     </>
   );
 }

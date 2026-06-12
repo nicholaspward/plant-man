@@ -139,14 +139,12 @@ export type ActionResourceSummary = {
 export type RecipeSummary = {
   id: number;
   name: string;
-  type: string;
   measurementMode: RecipeMeasurementMode;
 };
 
 export type Recipe = {
   id: number;
   name: string;
-  type: string;
   measurementMode: RecipeMeasurementMode;
   outputResource: ActionResourceSummary | null;
   components: RecipeComponent[];
@@ -311,7 +309,6 @@ export type CareActivityActionResourcePayload = {
 
 export type RecipePayload = {
   name: string;
-  type: string;
   measurementMode: RecipeMeasurementMode;
   outputResourceName: string | null;
   components: RecipeComponentPayload[];

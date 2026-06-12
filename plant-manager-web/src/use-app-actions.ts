@@ -141,13 +141,7 @@ export function useAppActions({
 
     setIsSaving(true);
     try {
-      const payload = editors.editingPlantId === null
-        ? toPlantPayload(editors.form)
-        : {
-            ...toPlantPayload(editors.form),
-            taxonId: editors.activePlant?.taxonId ?? null,
-            locationId: editors.activePlant?.locationId ?? null,
-          };
+      const payload = toPlantPayload(editors.form);
       if (editors.editingPlantId === null) {
         await createPlant(payload);
       } else {
@@ -160,39 +154,6 @@ export function useAppActions({
     } finally {
       setIsSaving(false);
     }
-  }
-
-  async function updateManagedPlant(nextValues: {
-    taxonId?: number | null;
-    locationId?: number | null;
-  }) {
-    if (!editors.selectedPlant) {
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      await updatePlant(editors.selectedPlant.id, {
-        nickname: editors.selectedPlant.nickname,
-        birthday: editors.selectedPlant.birthday,
-        taxonId: nextValues.taxonId === undefined ? editors.selectedPlant.taxonId : nextValues.taxonId,
-        locationId: nextValues.locationId === undefined ? editors.selectedPlant.locationId : nextValues.locationId,
-        careSchedules: null,
-      });
-      await loadPlants();
-    } catch {
-      setError('Could not update the plant assignment.');
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  function setManagedPlantTaxon(taxonId: string) {
-    void updateManagedPlant({ taxonId: taxonId ? Number(taxonId) : null });
-  }
-
-  function setManagedPlantLocation(locationId: string) {
-    void updateManagedPlant({ locationId: locationId ? Number(locationId) : null });
   }
 
   async function removePlant(plant: Plant) {
@@ -537,8 +498,8 @@ export function useAppActions({
   }
 
   async function saveRecipe() {
-    if (!editors.recipeForm.name.trim() || !editors.recipeForm.type.trim() || !editors.recipeForm.outputResourceName.trim() || editors.recipeForm.components.length === 0) {
-      setError('Recipe name, type, produced resource, and at least one component are required.');
+    if (!editors.recipeForm.name.trim() || !editors.recipeForm.outputResourceName.trim() || editors.recipeForm.components.length === 0) {
+      setError('Recipe name, produced resource, and at least one component are required.');
       return;
     }
 
@@ -847,8 +808,6 @@ export function useAppActions({
     saveTaxon,
     searchTaxonInfo,
     previewCatalogImportFile,
-    setManagedPlantLocation,
-    setManagedPlantTaxon,
     setPlantInfoQuery,
   };
 }

@@ -29,6 +29,8 @@ import type {
 export const emptyPlantForm = {
   nickname: '',
   birthday: '',
+  taxonId: '',
+  locationId: '',
 };
 
 export const emptyTaxonForm = {
@@ -73,7 +75,6 @@ export const emptyActivityForm = {
 
 export const emptyRecipeForm = {
   name: '',
-  type: 'Soil mixture',
   measurementMode: 'quantity' as RecipeMeasurementMode,
   outputResourceName: '',
   components: [] as RecipeComponentFormState[],
@@ -101,7 +102,7 @@ export type RecipeComponentFormState = {
 
 export const emptyFlagDefinitionForm = {
   name: '',
-  color: '#f2f2f2',
+  color: '#F1F2F4',
 };
 
 export const emptyPlantFlagForm = {
@@ -135,12 +136,14 @@ export type RecipeFormState = typeof emptyRecipeForm;
 export type FlagDefinitionFormState = typeof emptyFlagDefinitionForm;
 export type PlantFlagFormState = typeof emptyPlantFlagForm;
 export type BulkScheduleFormState = typeof emptyBulkScheduleForm;
-export type View = 'home' | 'plants' | 'plant-management' | 'schedules' | 'taxa' | 'locations' | 'groups' | 'actions' | 'resources' | 'recipes' | 'activities' | 'flags' | 'import-export';
+export type View = 'home' | 'plant-management' | 'schedules' | 'taxa' | 'locations' | 'groups' | 'actions' | 'resources' | 'recipes' | 'activities' | 'flags' | 'import-export';
 
 export function toPlantForm(plant: Plant): PlantFormState {
   return {
     nickname: plant.nickname,
     birthday: plant.birthday ?? '',
+    taxonId: plant.taxonId === null ? '' : String(plant.taxonId),
+    locationId: plant.locationId === null ? '' : String(plant.locationId),
   };
 }
 
@@ -148,8 +151,8 @@ export function toPlantPayload(form: PlantFormState): PlantPayload {
   return {
     nickname: form.nickname.trim(),
     birthday: form.birthday || null,
-    taxonId: null,
-    locationId: null,
+    taxonId: form.taxonId ? Number(form.taxonId) : null,
+    locationId: form.locationId ? Number(form.locationId) : null,
     careSchedules: null,
   };
 }
@@ -292,7 +295,6 @@ export function toActivityPayload(form: ActivityFormState): CareActivityPayload 
 export function toRecipeForm(recipe: Recipe): RecipeFormState {
   return {
     name: recipe.name,
-    type: recipe.type,
     measurementMode: recipe.measurementMode,
     outputResourceName: recipe.outputResource?.name ?? '',
     components: recipe.components.map((component) => ({
@@ -308,7 +310,6 @@ export function toRecipeForm(recipe: Recipe): RecipeFormState {
 export function toRecipePayload(form: RecipeFormState): RecipePayload {
   return {
     name: form.name.trim(),
-    type: form.type.trim(),
     measurementMode: form.measurementMode,
     outputResourceName: form.outputResourceName.trim() || null,
     components: form.components.map((component) => ({

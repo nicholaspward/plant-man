@@ -1,6 +1,7 @@
-import { Edit3, Eye, Plus, Save, Trash2, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import type { ActionResource, CareAction, CareActivity } from '../domain';
 import type { ActivityFormState } from '../form-state';
+import { CatalogFilterSection, ClosePanelButton, DetailActions, EntityList, RecordActions, SummaryActionButton, SummaryStrip } from './Ui';
 
 type ActivitiesViewProps = {
   actions: CareAction[];
@@ -46,6 +47,18 @@ export function ActivitiesView({
   onSave,
   resources,
 }: ActivitiesViewProps) {
+  const [filterQuery, setFilterQuery] = useState('');
+  const filteredActivities = useMemo(() => {
+    const query = filterQuery.trim().toLowerCase();
+    if (!query) {
+      return activities;
+    }
+
+    return activities.filter((activity) =>
+      `${activity.name} ${activity.notes ?? ''} ${formatActivitySummary(activity)}`.toLowerCase().includes(query)
+    );
+  }, [activities, filterQuery]);
+
   function updateAction(index: number, nextAction: ActivityFormState['actions'][number]) {
     onFieldChange(
       'actions',
@@ -69,35 +82,55 @@ export function ActivitiesView({
 
   return (
     <>
-      <section className="summary-panel" aria-labelledby="activities-summary-heading">
-        <div>
-          <p className="eyebrow">Care activities</p>
-          <h2 id="activities-summary-heading">
-            {isLoading ? 'Loading activities' : `${activities.length} activities`}
-          </h2>
-          <p>{error ?? 'Configure reusable care bundles with actions and per-action resources.'}</p>
-        </div>
-        <button className="primary-action" type="button" onClick={onNew}>
-          <Plus size={18} />
-          New activity
-        </button>
-      </section>
+      <SummaryStrip
+        ariaLabel="Activities summary"
+        action={<SummaryActionButton onClick={onNew}>New</SummaryActionButton>}
+      >
+        <p>{error ?? 'Configure reusable care bundles with actions and per-action resources.'}</p>
+      </SummaryStrip>
+
+      <CatalogFilterSection
+        value={filterQuery}
+        placeholder="Search activities"
+        onChange={setFilterQuery}
+      />
+
+      <EntityList
+        ariaLabel="Activities"
+        emptyMessage={activities.length === 0 ? 'No activities yet.' : 'No activities match this search.'}
+        getKey={(activity) => activity.id}
+        isLoading={isLoading}
+        items={filteredActivities}
+        renderActions={(activity) => (
+          <RecordActions
+            deleteLabel={`Delete ${activity.name}`}
+            editLabel={`Edit ${activity.name}`}
+            viewLabel={`View ${activity.name}`}
+            onDelete={() => onDelete(activity)}
+            onEdit={() => onEdit(activity)}
+            onView={() => onOpenDetail(activity)}
+          />
+        )}
+        renderContent={(activity) => (
+          <>
+            <h3>{activity.name}</h3>
+            <p>{formatActivitySummary(activity)}</p>
+          </>
+        )}
+      />
 
       {selectedActivity && !isEditorOpen ? (
-        <section className="editor-panel" aria-labelledby="activity-detail-heading">
+        <section className="work-panel" aria-labelledby="activity-detail-heading">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Activity detail</p>
               <h2 id="activity-detail-heading">{selectedActivity.name}</h2>
             </div>
-            <div className="row-actions">
-              <button className="icon-button compact" type="button" aria-label={`Edit ${selectedActivity.name}`} onClick={() => onEdit(selectedActivity)}>
-                <Edit3 size={17} />
-              </button>
-              <button className="icon-button compact" type="button" aria-label="Close activity detail" onClick={onCloseDetail}>
-                <X size={18} />
-              </button>
-            </div>
+            <DetailActions
+              closeLabel="Close activity detail"
+              editLabel={`Edit ${selectedActivity.name}`}
+              onClose={onCloseDetail}
+              onEdit={() => onEdit(selectedActivity)}
+            />
           </div>
           <div className="plant-detail-meta">
             <div>
@@ -133,15 +166,12 @@ export function ActivitiesView({
       ) : null}
 
       {isEditorOpen ? (
-      <section className="editor-panel" aria-labelledby="activity-editor-heading">
+      <section className="work-panel" aria-labelledby="activity-editor-heading">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">{activeActivityName ? 'Editing' : 'New activity'}</p>
-            <h2 id="activity-editor-heading">{activeActivityName ?? 'Activity details'}</h2>
+            <h2 id="activity-editor-heading">{activeActivityName ?? 'New activity'}</h2>
           </div>
-          <button className="icon-button compact" type="button" aria-label="Clear form" onClick={onCancel}>
-            <X size={18} />
-          </button>
+          <ClosePanelButton onClick={onCancel} />
         </div>
 
         <div className="plant-form">
@@ -292,7 +322,7 @@ export function ActivitiesView({
                                 },
                               )}
                             >
-                              <Trash2 size={17} />
+                              Remove
                             </button>
                           </div>
                         );
@@ -313,7 +343,6 @@ export function ActivitiesView({
                           },
                         )}
                       >
-                        <Plus size={16} />
                         Add resource
                       </button>
                     </div>
@@ -324,7 +353,7 @@ export function ActivitiesView({
                       aria-label="Remove action"
                       onClick={() => removeAction(actionIndex)}
                     >
-                      <Trash2 size={17} />
+                      Remove
                     </button>
                   </div>
                 );
@@ -336,7 +365,6 @@ export function ActivitiesView({
               disabled={actions.length === 0}
               onClick={addAction}
             >
-              <Plus size={16} />
               Add action
             </button>
           </fieldset>
@@ -351,8 +379,7 @@ export function ActivitiesView({
 
         <div className="form-actions">
           <button className="primary-action" type="button" disabled={isSaving || form.actions.length === 0 || hasIncompleteActions()} onClick={onSave}>
-            <Save size={18} />
-            {isSaving ? 'Saving' : 'Save activity'}
+            {isSaving ? 'Saving' : 'Save'}
           </button>
           <button className="text-button" type="button" onClick={onCancel}>
             Cancel
@@ -361,37 +388,6 @@ export function ActivitiesView({
       </section>
       ) : null}
 
-      <section className="section" aria-labelledby="activities-list-heading">
-        <div className="section-heading">
-          <h2 id="activities-list-heading">All Activities</h2>
-        </div>
-
-        <div className="plant-list">
-          {!isLoading && activities.length === 0 ? (
-            <p className="empty-state">No activities yet.</p>
-          ) : null}
-
-          {activities.map((activity) => (
-            <article className="plant-row" key={activity.id}>
-              <div>
-                <h3>{activity.name}</h3>
-                <p>{formatActivitySummary(activity)}</p>
-              </div>
-              <div className="row-actions">
-                <button className="icon-button compact" type="button" aria-label={`View ${activity.name}`} onClick={() => onOpenDetail(activity)}>
-                  <Eye size={17} />
-                </button>
-                <button className="icon-button compact" type="button" aria-label={`Edit ${activity.name}`} onClick={() => onEdit(activity)}>
-                  <Edit3 size={17} />
-                </button>
-                <button className="icon-button compact danger" type="button" aria-label={`Delete ${activity.name}`} onClick={() => onDelete(activity)}>
-                  <Trash2 size={17} />
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
     </>
   );
 }

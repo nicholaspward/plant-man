@@ -168,7 +168,7 @@ export function useAppEditors(data: AppEditorData, setView: (view: View) => void
     setSelectedPlantId(null);
     setForm(emptyPlantForm);
     setIsPlantEditorOpen(true);
-    setView('plants');
+    setView('plant-management');
   }
 
   function openPlantDetail(plant: Plant) {
@@ -180,25 +180,19 @@ export function useAppEditors(data: AppEditorData, setView: (view: View) => void
   }
 
   function startEditingPlant(plant: Plant) {
-    setSelectedPlantId(null);
+    setSelectedPlantId(plant.id);
     setEditingPlantId(plant.id);
     setForm(toPlantForm(plant));
     setIsPlantEditorOpen(true);
-    setView('plants');
+    setView('plant-management');
   }
 
   function cancelEditing() {
     setEditingPlantId(null);
+    setSelectedPlantId(null);
     setForm(emptyPlantForm);
     setIsPlantEditorOpen(false);
-  }
-
-  function openPlantReadOnlyDetail(plant: Plant) {
-    setSelectedPlantId(plant.id);
-    setEditingPlantId(null);
-    setForm(emptyPlantForm);
-    setIsPlantEditorOpen(false);
-    setView('plants');
+    setPlantFlagForm(emptyPlantFlagForm);
   }
 
   function startAddingTaxon() {
@@ -384,8 +378,22 @@ export function useAppEditors(data: AppEditorData, setView: (view: View) => void
   }
 
   function selectManagedPlant(plantId: string) {
-    setSelectedPlantId(plantId ? Number(plantId) : null);
+    const plant = data.plants.find((item) => item.id === Number(plantId));
+    if (!plant) {
+      setSelectedPlantId(null);
+      setEditingPlantId(null);
+      setForm(emptyPlantForm);
+      setIsPlantEditorOpen(false);
+      setPlantFlagForm(emptyPlantFlagForm);
+      return;
+    }
+
+    setSelectedPlantId(plant.id);
+    setEditingPlantId(plant.id);
+    setForm(toPlantForm(plant));
+    setIsPlantEditorOpen(true);
     setPlantFlagForm(emptyPlantFlagForm);
+    setView('plant-management');
   }
 
   return {
@@ -432,7 +440,6 @@ export function useAppEditors(data: AppEditorData, setView: (view: View) => void
     isTaxonEditorOpen,
     locationForm,
     openPlantDetail,
-    openPlantReadOnlyDetail,
     plantFlagForm,
     plantGroupForm,
     recipeForm,

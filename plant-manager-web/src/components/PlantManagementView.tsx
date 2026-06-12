@@ -1,4 +1,4 @@
-import { Check, MapPin, Save, Tags, Trash2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import type {
   Plant,
   PlantFlag,
@@ -6,11 +6,15 @@ import type {
   PlantLocation,
   PlantTaxon,
 } from '../domain';
-import type { PlantFlagFormState } from '../form-state';
+import type { PlantFlagFormState, PlantFormState } from '../form-state';
 import { formatTaxon } from '../form-state';
+import { CatalogFilterSection, SummaryActionButton, SummaryStrip } from './Ui';
 
 type PlantManagementViewProps = {
+  activePlantName?: string;
   error: string | null;
+  form: PlantFormState;
+  isPlantEditorOpen: boolean;
   isLoading: boolean;
   isSaving: boolean;
   plantFlagDefinitions: PlantFlagDefinition[];
@@ -19,18 +23,23 @@ type PlantManagementViewProps = {
   plantTaxa: PlantTaxon[];
   plants: Plant[];
   selectedPlant?: Plant;
-  selectedPlantId: number | null;
   onAssignFlag: () => void;
+  onCancelPlant: () => void;
+  onDeletePlant: (plant: Plant) => void;
   onFieldChange: (field: keyof PlantFlagFormState, value: string) => void;
+  onNewPlant: () => void;
+  onPlantFieldChange: (field: keyof PlantFormState, value: string) => void;
   onRemoveFlag: (flag: PlantFlag) => void;
   onResolveFlag: (flag: PlantFlag) => void;
+  onSavePlant: () => void;
   onSelectPlant: (plantId: string) => void;
-  onSetLocation: (locationId: string) => void;
-  onSetTaxon: (taxonId: string) => void;
 };
 
 export function PlantManagementView({
+  activePlantName,
   error,
+  form,
+  isPlantEditorOpen,
   isLoading,
   isSaving,
   plantFlagDefinitions,
@@ -39,165 +48,150 @@ export function PlantManagementView({
   plantTaxa,
   plants,
   selectedPlant,
-  selectedPlantId,
   onAssignFlag,
+  onCancelPlant,
+  onDeletePlant,
   onFieldChange,
+  onNewPlant,
+  onPlantFieldChange,
   onRemoveFlag,
   onResolveFlag,
+  onSavePlant,
   onSelectPlant,
-  onSetLocation,
-  onSetTaxon,
 }: PlantManagementViewProps) {
-  const selectedTaxon = plantTaxa.find((taxon) => taxon.id === selectedPlant?.taxonId);
-  const selectedLocation = plantLocations.find((location) => location.id === selectedPlant?.locationId);
+  const [plantSearchQuery, setPlantSearchQuery] = useState('');
+  const isNewPlant = isPlantEditorOpen && !activePlantName;
   const activeFlags = selectedPlant?.flags.filter((flag) => flag.resolvedOn === null) ?? [];
   const resolvedFlags = selectedPlant?.flags.filter((flag) => flag.resolvedOn !== null) ?? [];
+  const filteredPlants = useMemo(() => {
+    const query = plantSearchQuery.trim().toLowerCase();
+    if (query.length === 0) {
+      return plants;
+    }
+
+    return plants.filter((plant) => getPlantSearchText(plant, plantTaxa).includes(query));
+  }, [plantSearchQuery, plantTaxa, plants]);
 
   return (
     <>
-      <section className="summary-panel" aria-labelledby="plant-management-summary-heading">
-        <div>
-          <p className="eyebrow">Relationship surface</p>
-          <h2 id="plant-management-summary-heading">
-            {isLoading ? 'Loading plants' : 'Plant Management'}
-          </h2>
-          <p>{error ?? 'Attach catalog records to plant objects without changing the catalogs.'}</p>
-        </div>
-      </section>
-
-      <section className="editor-panel" aria-labelledby="plant-management-heading">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Selected plant</p>
-            <h2 id="plant-management-heading">{selectedPlant?.nickname ?? 'Choose a plant'}</h2>
+      <SummaryStrip
+        ariaLabel="Plant management summary"
+        action={(
+          <div className="summary-actions">
+            <SummaryActionButton onClick={onNewPlant}>New</SummaryActionButton>
           </div>
-        </div>
+        )}
+      >
+        <p>{error ?? 'Create plants and attach catalog records to each plant.'}</p>
+      </SummaryStrip>
 
-        <div className="plant-form">
-          <label>
-            Plant
-            <select
-              value={selectedPlantId ?? ''}
-              onChange={(event) => onSelectPlant(event.target.value)}
-            >
-              <option value="">Select a plant</option>
-              {plants.map((plant) => (
-                <option key={plant.id} value={plant.id}>
-                  {plant.nickname}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      </section>
+      {!isNewPlant ? (
+        <>
+          <CatalogFilterSection
+            value={plantSearchQuery}
+            placeholder="Search plants"
+            onChange={setPlantSearchQuery}
+          />
+
+          <section className="work-panel" aria-label="Plants">
+          <div className="plant-list">
+            {!isLoading && plants.length === 0 ? (
+              <p className="empty-state">No plants yet.</p>
+            ) : null}
+
+            {!isLoading && plants.length > 0 && filteredPlants.length === 0 ? (
+              <p className="empty-state">No plants match this search.</p>
+            ) : null}
+
+            {filteredPlants.map((plant) => (
+              <article className="plant-row" key={plant.id}>
+                <div>
+                  <h3>{plant.nickname}</h3>
+                  <p>
+                    {plant.birthday ? `Birthday ${plant.birthday}` : 'No birthday'}
+                    {plant.taxon ? ` - ${plant.taxon}` : ''}
+                    {plant.location ? ` - ${plant.location}` : ''}
+                  </p>
+                </div>
+                <div className="row-actions">
+                  <button className="small-action" type="button" onClick={() => onSelectPlant(String(plant.id))}>
+                    Manage
+                  </button>
+                  <button className="icon-button compact danger" type="button" aria-label={`Delete ${plant.nickname}`} onClick={() => onDeletePlant(plant)}>
+                    Delete
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+          </section>
+        </>
+      ) : null}
+
+      {isPlantEditorOpen ? (
+        <section className="work-panel" aria-labelledby="plant-editor-heading">
+          <div className="section-heading">
+            <div>
+              <h2 id="plant-editor-heading">{activePlantName ?? 'New plant'}</h2>
+            </div>
+            <button className="icon-button compact" type="button" aria-label="Close panel" onClick={onCancelPlant}>
+              Close
+            </button>
+          </div>
+
+          <div className="plant-form">
+            <label>
+              Name
+              <input
+                value={form.nickname}
+                onChange={(event) => onPlantFieldChange('nickname', event.target.value)}
+              />
+            </label>
+            <label>
+              Birthday
+              <input
+                type="date"
+                value={form.birthday}
+                onChange={(event) => onPlantFieldChange('birthday', event.target.value)}
+              />
+            </label>
+            <label>
+              Taxon
+              <select
+                value={form.taxonId}
+                onChange={(event) => onPlantFieldChange('taxonId', event.target.value)}
+              >
+                <option value="">No taxon</option>
+                {plantTaxa.map((taxon) => (
+                  <option key={taxon.id} value={taxon.id}>
+                    {formatTaxon(taxon)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Location
+              <select
+                value={form.locationId}
+                onChange={(event) => onPlantFieldChange('locationId', event.target.value)}
+              >
+                <option value="">No location</option>
+                {plantLocations.map((location) => (
+                  <option key={location.id} value={location.id}>
+                    {location.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </section>
+      ) : null}
 
       {selectedPlant ? (
-        <div className="plant-detail-grid">
-          <section className="detail-section detail-section-wide" aria-labelledby="plant-management-life">
+        <>
+          <section className="work-panel" aria-labelledby="plant-management-flags">
             <div className="detail-section-heading">
-              <Check size={17} />
-              <h3 id="plant-management-life">Plant History</h3>
-            </div>
-            <div className="plant-detail-meta compact-meta">
-              <div>
-                <span>Birthday</span>
-                <strong>{selectedPlant.birthday ?? 'Not set'}</strong>
-              </div>
-            </div>
-          </section>
-
-          <section className="detail-section" aria-labelledby="plant-management-taxa">
-            <div className="detail-section-heading">
-              <Tags size={17} />
-              <h3 id="plant-management-taxa">Plant Taxa</h3>
-            </div>
-            <div className="plant-form">
-              <label>
-                Taxon
-                <select
-                  disabled={isSaving}
-                  value={selectedPlant.taxonId ?? ''}
-                  onChange={(event) => onSetTaxon(event.target.value)}
-                >
-                  <option value="">No taxon</option>
-                  {plantTaxa.map((taxon) => (
-                    <option key={taxon.id} value={taxon.id}>
-                      {formatTaxon(taxon)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            {selectedTaxon ? (
-              <div className="plant-detail-meta compact-meta">
-                <div>
-                  <span>Common name</span>
-                  <strong>{selectedTaxon.name}</strong>
-                </div>
-                <div>
-                  <span>Botanical name</span>
-                  <strong>{formatTaxon(selectedTaxon)}</strong>
-                </div>
-              </div>
-            ) : (
-              <p className="empty-state">No taxon assigned.</p>
-            )}
-          </section>
-
-          <section className="detail-section" aria-labelledby="plant-management-placement">
-            <div className="detail-section-heading">
-              <MapPin size={17} />
-              <h3 id="plant-management-placement">Location</h3>
-            </div>
-            <div className="plant-form">
-              <label>
-                Location
-                <select
-                  disabled={isSaving}
-                  value={selectedPlant.locationId ?? ''}
-                  onChange={(event) => onSetLocation(event.target.value)}
-                >
-                  <option value="">No location</option>
-                  {plantLocations.map((location) => (
-                    <option key={location.id} value={location.id}>
-                      {location.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            {selectedLocation ? (
-              <div className="plant-detail-meta compact-meta">
-                <div>
-                  <span>Location</span>
-                  <strong>{selectedLocation.name}</strong>
-                </div>
-                {selectedLocation.notes ? (
-                  <div className="meta-wide">
-                    <span>Notes</span>
-                    <strong>{selectedLocation.notes}</strong>
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <p className="empty-state">No location assigned.</p>
-            )}
-          </section>
-
-          <section className="detail-section detail-section-wide" aria-labelledby="plant-management-flags">
-            <div className="detail-section-heading">
-              <Check size={17} />
               <h3 id="plant-management-flags">Flags</h3>
-            </div>
-            <div className="plant-detail-meta compact-meta">
-              <div>
-                <span>Active</span>
-                <strong>{activeFlags.length}</strong>
-              </div>
-              <div>
-                <span>Resolved</span>
-                <strong>{resolvedFlags.length}</strong>
-              </div>
             </div>
 
             <div className="flag-assignment-form">
@@ -236,7 +230,6 @@ export function PlantManagementView({
                 disabled={isSaving || !plantFlagForm.plantFlagDefinitionId}
                 onClick={onAssignFlag}
               >
-                <Save size={16} />
                 Attach flag
               </button>
             </div>
@@ -265,7 +258,7 @@ export function PlantManagementView({
                           Resolve
                         </button>
                         <button className="icon-button compact danger" type="button" aria-label={`Remove ${flag.name}`} disabled={isSaving} onClick={() => onRemoveFlag(flag)}>
-                          <Trash2 size={17} />
+                          Remove
                         </button>
                       </div>
                     </div>
@@ -293,10 +286,107 @@ export function PlantManagementView({
               </>
             ) : null}
           </section>
-        </div>
+
+          <section className="work-panel" aria-labelledby="plant-management-timeline">
+            <div className="detail-section-heading">
+              <h3 id="plant-management-timeline">Timeline</h3>
+            </div>
+            <PlantTimeline plant={selectedPlant} />
+          </section>
+        </>
       ) : null}
+
+      {isPlantEditorOpen ? (
+        <section className="work-panel plant-editor-actions" aria-label="Plant edit actions">
+          <div className="form-actions">
+            <button className="primary-action" type="button" disabled={isSaving} onClick={onSavePlant}>
+              {isSaving ? 'Saving' : 'Save'}
+            </button>
+            <button className="text-button" type="button" onClick={onCancelPlant}>
+              Cancel
+            </button>
+            {selectedPlant ? (
+              <button className="small-action danger" type="button" disabled={isSaving} onClick={() => onDeletePlant(selectedPlant)}>
+                Delete
+              </button>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
     </>
   );
+}
+
+function getPlantSearchText(plant: Plant, plantTaxa: PlantTaxon[]) {
+  const taxon = plantTaxa.find((item) => item.id === plant.taxonId);
+  return [
+    plant.nickname,
+    plant.birthday,
+    plant.location,
+    plant.taxon,
+    ...plant.groups.map((group) => group.name),
+    taxon?.name,
+    taxon?.genus,
+    taxon?.species,
+    taxon?.cultivar,
+    taxon?.variety,
+    taxon?.authority,
+    taxon?.family,
+    taxon?.commonName,
+    taxon ? formatTaxon(taxon) : null,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
+function PlantTimeline({ plant }: { plant: Plant }) {
+  const timelineItems = [
+    ...(plant.birthday ? [{
+      date: plant.birthday,
+      title: 'Birthday',
+      detail: `${plant.nickname} joined the collection.`,
+    }] : []),
+    ...plant.actionLogs.map((log) => ({
+      date: log.performedOn,
+      title: log.action,
+      detail: formatLogDetail(log),
+    })),
+  ].sort((left, right) => right.date.localeCompare(left.date));
+
+  if (timelineItems.length === 0) {
+    return <p className="empty-state">No timeline entries yet.</p>;
+  }
+
+  return (
+    <div className="timeline-list">
+      {timelineItems.map((item, index) => (
+        <article className="timeline-item" key={`${item.date}-${item.title}-${index}`}>
+          <time>{item.date}</time>
+          <div>
+            <h4>{item.title}</h4>
+            <p>{item.detail}</p>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function formatLogDetail(log: Plant['actionLogs'][number]) {
+  const resources = log.resources.map((resource) => {
+    const amount = resource.quantity === null
+      ? ''
+      : ` (${resource.quantity}${resource.unit ? ` ${resource.unit}` : ''})`;
+    return `${resource.name}${amount}`;
+  });
+  const parts = [
+    log.notes,
+    resources.length > 0 ? resources.join(', ') : null,
+  ].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(' - ') : 'Care logged.';
 }
 
 function formatDate(date: string) {

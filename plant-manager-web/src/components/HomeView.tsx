@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react';
-import { CalendarCheck } from 'lucide-react';
 import type { CareTask, Plant, PlantGroup } from '../domain';
 import { PlantCard } from './PlantCard';
+import { SummaryStrip } from './Ui';
 
 type HomeViewProps = {
   careTasks: CareTask[];
-  dueCount: number;
   error: string | null;
   groups: PlantGroup[];
   isLoading: boolean;
@@ -17,7 +16,6 @@ type HomeViewProps = {
 
 export function HomeView({
   careTasks,
-  dueCount,
   error,
   groups,
   isLoading,
@@ -35,17 +33,11 @@ export function HomeView({
 
   return (
     <>
-      <section className="summary-panel" aria-labelledby="summary-heading">
-        <div>
-          <p className="eyebrow">Care queue</p>
-          <h2 id="summary-heading">
-            {isLoading ? 'Loading care' : `${dueCount} tasks due`}
-          </h2>
-          <p>{error ?? 'Start with the plants that need attention now.'}</p>
-        </div>
-      </section>
+      <SummaryStrip ariaLabel="Dashboard summary">
+        <p>{error ?? 'Start with the plants that need attention now.'}</p>
+      </SummaryStrip>
 
-      <section className="section" aria-labelledby="calendar-heading">
+      <section className="work-panel" aria-labelledby="calendar-heading">
         <div className="section-heading">
           <h2 id="calendar-heading">Care Calendar</h2>
           <span className="schedule-count">{selectedTasks.length} selected</span>
@@ -93,7 +85,6 @@ export function HomeView({
                 disabled={task.status !== 'due'}
                 onClick={() => onCompleteTask(task)}
               >
-                <CalendarCheck size={16} />
                 Log
               </button>
             </article>
@@ -101,7 +92,7 @@ export function HomeView({
         </div>
       </section>
 
-      <section className="section" aria-labelledby="care-heading">
+      <section className="work-panel" aria-labelledby="care-heading">
         <div className="section-heading">
           <h2 id="care-heading">Due Care</h2>
           <button className="text-button" type="button">View all</button>
@@ -129,7 +120,6 @@ export function HomeView({
                     type="button"
                     onClick={() => onCompleteBulkTasks(group.tasks)}
                   >
-                    <CalendarCheck size={16} />
                     Log all due
                   </button>
                 </article>
@@ -154,7 +144,6 @@ export function HomeView({
                     type="button"
                     onClick={() => onCompleteBulkTasks(group.tasks)}
                   >
-                    <CalendarCheck size={16} />
                     Log group
                   </button>
                 </article>
@@ -177,7 +166,6 @@ export function HomeView({
                     type="button"
                     onClick={() => onCompleteTask(task)}
                   >
-                    <CalendarCheck size={16} />
                     Log
                   </button>
                 </article>
@@ -187,7 +175,7 @@ export function HomeView({
         </div>
       </section>
 
-      <section className="section" aria-labelledby="plants-heading">
+      <section className="work-panel" aria-labelledby="plants-heading">
         <div className="section-heading">
           <h2 id="plants-heading">My Plants</h2>
         </div>

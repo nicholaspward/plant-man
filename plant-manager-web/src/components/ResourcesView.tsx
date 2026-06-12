@@ -1,6 +1,7 @@
-import { Edit3, Eye, Plus, Save, Trash2, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import type { ActionResource } from '../domain';
 import type { ResourceFormState } from '../form-state';
+import { CatalogFilterSection, ClosePanelButton, DetailActions, EntityList, RecordActions, SummaryActionButton, SummaryStrip } from './Ui';
 
 type ResourcesViewProps = {
   activeResourceName?: string;
@@ -39,37 +40,73 @@ export function ResourcesView({
   onSave,
   resources,
 }: ResourcesViewProps) {
+  const [filterQuery, setFilterQuery] = useState('');
+  const filteredResources = useMemo(() => {
+    const query = filterQuery.trim().toLowerCase();
+    if (!query) {
+      return resources;
+    }
+
+    return resources.filter((resource) =>
+      `${resource.name} ${resource.notes ?? ''} ${resource.producedByRecipe?.name ?? ''}`.toLowerCase().includes(query)
+    );
+  }, [filterQuery, resources]);
+
   return (
     <>
-      <section className="summary-panel" aria-labelledby="resources-summary-heading">
-        <div>
-          <p className="eyebrow">Resource library</p>
-          <h2 id="resources-summary-heading">
-            {isLoading ? 'Loading resources' : `${resources.length} resources`}
-          </h2>
-          <p>{error ?? 'Configure materials, products, tools, and containers used during care.'}</p>
-        </div>
-        <button className="primary-action" type="button" onClick={onNew}>
-          <Plus size={18} />
-          New resource
-        </button>
-      </section>
+      <SummaryStrip
+        ariaLabel="Resources summary"
+        action={<SummaryActionButton onClick={onNew}>New</SummaryActionButton>}
+      >
+        <p>{error ?? 'Configure materials, products, tools, and containers used during care.'}</p>
+      </SummaryStrip>
+
+      <CatalogFilterSection
+        value={filterQuery}
+        placeholder="Search resources"
+        onChange={setFilterQuery}
+      />
+
+      <EntityList
+        ariaLabel="Resources"
+        emptyMessage={resources.length === 0 ? 'No resources yet.' : 'No resources match this search.'}
+        getKey={(resource) => resource.id}
+        isLoading={isLoading}
+        items={filteredResources}
+        renderActions={(resource) => (
+          <RecordActions
+            deleteLabel={`Delete ${resource.name}`}
+            editLabel={`Edit ${resource.name}`}
+            viewLabel={`View ${resource.name}`}
+            onDelete={() => onDelete(resource)}
+            onEdit={() => onEdit(resource)}
+            onView={() => onOpenDetail(resource)}
+          />
+        )}
+        renderContent={(resource) => (
+          <>
+            <h3>{resource.name}</h3>
+            <p>
+              {resource.producedByRecipe
+                ? `Produced by ${resource.producedByRecipe.name}`
+                : resource.notes ?? 'No notes'}
+            </p>
+          </>
+        )}
+      />
 
       {selectedResource && !isEditorOpen ? (
-        <section className="editor-panel" aria-labelledby="resource-detail-heading">
+        <section className="work-panel" aria-labelledby="resource-detail-heading">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Resource detail</p>
               <h2 id="resource-detail-heading">{selectedResource.name}</h2>
             </div>
-            <div className="row-actions">
-              <button className="icon-button compact" type="button" aria-label={`Edit ${selectedResource.name}`} onClick={() => onEdit(selectedResource)}>
-                <Edit3 size={17} />
-              </button>
-              <button className="icon-button compact" type="button" aria-label="Close resource detail" onClick={onCloseDetail}>
-                <X size={18} />
-              </button>
-            </div>
+            <DetailActions
+              closeLabel="Close resource detail"
+              editLabel={`Edit ${selectedResource.name}`}
+              onClose={onCloseDetail}
+              onEdit={() => onEdit(selectedResource)}
+            />
           </div>
           <div className="plant-detail-meta">
             <div>
@@ -87,15 +124,12 @@ export function ResourcesView({
       ) : null}
 
       {isEditorOpen ? (
-      <section className="editor-panel" aria-labelledby="resource-editor-heading">
+      <section className="work-panel" aria-labelledby="resource-editor-heading">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">{activeResourceName ? 'Editing' : 'New resource'}</p>
-            <h2 id="resource-editor-heading">{activeResourceName ?? 'Resource details'}</h2>
+            <h2 id="resource-editor-heading">{activeResourceName ?? 'New resource'}</h2>
           </div>
-          <button className="icon-button compact" type="button" aria-label="Clear form" onClick={onCancel}>
-            <X size={18} />
-          </button>
+          <ClosePanelButton onClick={onCancel} />
         </div>
 
         <div className="plant-form">
@@ -117,8 +151,7 @@ export function ResourcesView({
 
         <div className="form-actions">
           <button className="primary-action" type="button" disabled={isSaving} onClick={onSave}>
-            <Save size={18} />
-            {isSaving ? 'Saving' : 'Save resource'}
+            {isSaving ? 'Saving' : 'Save'}
           </button>
           <button className="text-button" type="button" onClick={onCancel}>
             Cancel
@@ -127,41 +160,6 @@ export function ResourcesView({
       </section>
       ) : null}
 
-      <section className="section" aria-labelledby="resources-list-heading">
-        <div className="section-heading">
-          <h2 id="resources-list-heading">All Resources</h2>
-        </div>
-
-        <div className="plant-list">
-          {!isLoading && resources.length === 0 ? (
-            <p className="empty-state">No resources yet.</p>
-          ) : null}
-
-          {resources.map((resource) => (
-            <article className="plant-row" key={resource.id}>
-              <div>
-                <h3>{resource.name}</h3>
-                <p>
-                  {resource.producedByRecipe
-                    ? `Produced by ${resource.producedByRecipe.name}`
-                    : resource.notes ?? 'No notes'}
-                </p>
-              </div>
-              <div className="row-actions">
-                <button className="icon-button compact" type="button" aria-label={`View ${resource.name}`} onClick={() => onOpenDetail(resource)}>
-                  <Eye size={17} />
-                </button>
-                <button className="icon-button compact" type="button" aria-label={`Edit ${resource.name}`} onClick={() => onEdit(resource)}>
-                  <Edit3 size={17} />
-                </button>
-                <button className="icon-button compact danger" type="button" aria-label={`Delete ${resource.name}`} onClick={() => onDelete(resource)}>
-                  <Trash2 size={17} />
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
     </>
   );
 }

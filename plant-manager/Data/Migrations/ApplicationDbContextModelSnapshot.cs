@@ -485,11 +485,6 @@ namespace plant_manager.Data.Migrations
                     b.Property<int?>("OutputResourceId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("TEXT");
-
                     b.HasKey("Id");
 
                     b.HasIndex("Name")

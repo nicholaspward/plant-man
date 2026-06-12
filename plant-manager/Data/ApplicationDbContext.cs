@@ -251,7 +251,6 @@ namespace plant_manager.Data
                 entity.Property(e => e.Id)
                       .ValueGeneratedOnAdd();
                 entity.Property(e => e.Name).HasMaxLength(120).IsRequired();
-                entity.Property(e => e.Type).HasMaxLength(80).IsRequired();
                 entity.Property(e => e.MeasurementMode).HasMaxLength(40).IsRequired();
                 entity.Property(e => e.Notes).HasMaxLength(1000);
                 entity.HasIndex(e => e.Name).IsUnique();

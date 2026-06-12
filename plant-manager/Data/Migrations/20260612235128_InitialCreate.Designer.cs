@@ -11,8 +11,8 @@ using plant_manager.Data;
 namespace plant_manager.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260604231106_AddGbifPlantTaxonMetadata")]
-    partial class AddGbifPlantTaxonMetadata
+    [Migration("20260612235128_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -487,11 +487,6 @@ namespace plant_manager.Data.Migrations
 
                     b.Property<int?>("OutputResourceId")
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 

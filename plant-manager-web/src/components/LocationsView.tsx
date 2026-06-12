@@ -1,6 +1,7 @@
-import { Edit3, Eye, Plus, Save, Trash2, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import type { PlantLocation } from '../domain';
 import type { LocationFormState } from '../form-state';
+import { CatalogFilterSection, ClosePanelButton, DetailActions, EntityList, RecordActions, SummaryActionButton, SummaryStrip } from './Ui';
 
 type LocationsViewProps = {
   activeLocationName?: string;
@@ -39,37 +40,69 @@ export function LocationsView({
   onOpenDetail,
   onSave,
 }: LocationsViewProps) {
+  const [filterQuery, setFilterQuery] = useState('');
+  const filteredLocations = useMemo(() => {
+    const query = filterQuery.trim().toLowerCase();
+    if (!query) {
+      return locations;
+    }
+
+    return locations.filter((location) =>
+      `${location.name} ${location.notes ?? ''}`.toLowerCase().includes(query)
+    );
+  }, [filterQuery, locations]);
+
   return (
     <>
-      <section className="summary-panel" aria-labelledby="locations-summary-heading">
-        <div>
-          <p className="eyebrow">Location library</p>
-          <h2 id="locations-summary-heading">
-            {isLoading ? 'Loading locations' : `${locations.length} locations`}
-          </h2>
-          <p>{error ?? 'Create and maintain the places where plants live.'}</p>
-        </div>
-        <button className="primary-action" type="button" onClick={onNew}>
-          <Plus size={18} />
-          New location
-        </button>
-      </section>
+      <SummaryStrip
+        ariaLabel="Locations summary"
+        action={<SummaryActionButton onClick={onNew}>New</SummaryActionButton>}
+      >
+        <p>{error ?? 'Create and maintain the places where plants live.'}</p>
+      </SummaryStrip>
+
+      <CatalogFilterSection
+        value={filterQuery}
+        placeholder="Search locations"
+        onChange={setFilterQuery}
+      />
+
+      <EntityList
+        ariaLabel="Locations"
+        emptyMessage={locations.length === 0 ? 'No locations yet.' : 'No locations match this search.'}
+        getKey={(location) => location.id}
+        isLoading={isLoading}
+        items={filteredLocations}
+        renderActions={(location) => (
+          <RecordActions
+            deleteLabel={`Delete ${location.name}`}
+            editLabel={`Edit ${location.name}`}
+            viewLabel={`View ${location.name}`}
+            onDelete={() => onDelete(location)}
+            onEdit={() => onEdit(location)}
+            onView={() => onOpenDetail(location)}
+          />
+        )}
+        renderContent={(location) => (
+          <>
+            <h3>{location.name}</h3>
+            <p>{location.notes ?? 'No notes'}</p>
+          </>
+        )}
+      />
 
       {selectedLocation && !isEditorOpen ? (
-        <section className="editor-panel" aria-labelledby="location-detail-heading">
+        <section className="work-panel" aria-labelledby="location-detail-heading">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Location detail</p>
               <h2 id="location-detail-heading">{selectedLocation.name}</h2>
             </div>
-            <div className="row-actions">
-              <button className="icon-button compact" type="button" aria-label={`Edit ${selectedLocation.name}`} onClick={() => onEdit(selectedLocation)}>
-                <Edit3 size={17} />
-              </button>
-              <button className="icon-button compact" type="button" aria-label="Close location detail" onClick={onCloseDetail}>
-                <X size={18} />
-              </button>
-            </div>
+            <DetailActions
+              closeLabel="Close location detail"
+              editLabel={`Edit ${selectedLocation.name}`}
+              onClose={onCloseDetail}
+              onEdit={() => onEdit(selectedLocation)}
+            />
           </div>
           <div className="plant-detail-meta">
             <div>
@@ -81,15 +114,12 @@ export function LocationsView({
       ) : null}
 
       {isEditorOpen ? (
-      <section className="editor-panel" aria-labelledby="location-editor-heading">
+      <section className="work-panel" aria-labelledby="location-editor-heading">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">{activeLocationName ? 'Editing' : 'New location'}</p>
-            <h2 id="location-editor-heading">{activeLocationName ?? 'Location details'}</h2>
+            <h2 id="location-editor-heading">{activeLocationName ?? 'New location'}</h2>
           </div>
-          <button className="icon-button compact" type="button" aria-label="Clear form" onClick={onCancel}>
-            <X size={18} />
-          </button>
+          <ClosePanelButton onClick={onCancel} />
         </div>
 
         <div className="plant-form">
@@ -111,8 +141,7 @@ export function LocationsView({
 
         <div className="form-actions">
           <button className="primary-action" type="button" disabled={isSaving} onClick={onSave}>
-            <Save size={18} />
-            {isSaving ? 'Saving' : 'Save location'}
+            {isSaving ? 'Saving' : 'Save'}
           </button>
           <button className="text-button" type="button" onClick={onCancel}>
             Cancel
@@ -121,39 +150,6 @@ export function LocationsView({
       </section>
       ) : null}
 
-      <section className="section" aria-labelledby="locations-list-heading">
-        <div className="section-heading">
-          <h2 id="locations-list-heading">All Locations</h2>
-        </div>
-
-        <div className="plant-list">
-          {!isLoading && locations.length === 0 ? (
-            <p className="empty-state">No locations yet.</p>
-          ) : null}
-
-          {locations.map((location) => (
-            <article className="plant-row" key={location.id}>
-              <div>
-                <h3>{location.name}</h3>
-                <p>
-                  {location.notes ?? 'No notes'}
-                </p>
-              </div>
-              <div className="row-actions">
-                <button className="icon-button compact" type="button" aria-label={`View ${location.name}`} onClick={() => onOpenDetail(location)}>
-                  <Eye size={17} />
-                </button>
-                <button className="icon-button compact" type="button" aria-label={`Edit ${location.name}`} onClick={() => onEdit(location)}>
-                  <Edit3 size={17} />
-                </button>
-                <button className="icon-button compact danger" type="button" aria-label={`Delete ${location.name}`} onClick={() => onDelete(location)}>
-                  <Trash2 size={17} />
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
     </>
   );
 }
