@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { ActionResource, CareAction, CareActivity } from '../domain';
+import type { ActionResource, CareAction, CareActivity, CareActivityRecipeComponent } from '../domain';
 import type { ActivityFormState } from '../form-state';
 import { CatalogFilterSection, ClosePanelButton, DetailActions, EntityList, RecordActions, SummaryActionButton, SummaryStrip } from './Ui';
 
@@ -147,14 +147,32 @@ export function ActivitiesView({
                   <h4>{activityAction.name}</h4>
                   <p>{activityAction.description ?? 'No description'}</p>
                   {activityAction.resources.length > 0 ? (
-                    <p>
-                      {activityAction.resources.map((resource) => {
-                        const amount = resource.quantity === null
-                          ? ''
-                          : ` (${resource.quantity}${resource.unit ? ` ${resource.unit}` : ''})`;
-                        return `${resource.name}${amount}`;
-                      }).join(', ')}
-                    </p>
+                    <div className="activity-resource-detail-list">
+                      {activityAction.resources.map((resource) => (
+                        <div className="activity-resource-detail" key={resource.actionResourceId}>
+                          <p>{formatActivityResource(resource)}</p>
+                          {resource.producedByRecipe ? (
+                            <div className="recipe-procedure">
+                              <h5>{resource.producedByRecipe.name}</h5>
+                              {resource.producedByRecipe.components.length > 0 ? (
+                                <ol>
+                                  {resource.producedByRecipe.components.map((component) => (
+                                    <li key={component.actionResourceId}>
+                                      {formatRecipeComponent(component)}
+                                    </li>
+                                  ))}
+                                </ol>
+                              ) : (
+                                <p>No recipe components configured.</p>
+                              )}
+                              {resource.producedByRecipe.notes ? (
+                                <p>{resource.producedByRecipe.notes}</p>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
                   ) : (
                     <p>No resources</p>
                   )}
@@ -405,4 +423,19 @@ function formatActivitySummary(activity: CareActivity) {
         : `${action.name}: ${resourceNames.join(', ')}`;
     })
     .join(' | ');
+}
+
+function formatActivityResource(resource: CareActivity['actions'][number]['resources'][number]) {
+  const amount = resource.quantity === null
+    ? ''
+    : ` (${resource.quantity}${resource.unit ? ` ${resource.unit}` : ''})`;
+  return `${resource.name}${amount}`;
+}
+
+function formatRecipeComponent(component: CareActivityRecipeComponent) {
+  const amount = component.quantity === null
+    ? ''
+    : ` (${component.quantity}${component.unit ? ` ${component.unit}` : ''})`;
+  const notes = component.notes ? ` - ${component.notes}` : '';
+  return `${component.name}${amount}${notes}`;
 }

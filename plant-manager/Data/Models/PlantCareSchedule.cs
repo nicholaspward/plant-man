@@ -3,7 +3,6 @@ namespace plant_manager.Data.Models
     public class PlantCareSchedule
     {
         public int Id { get; set; }
-        public int PlantId { get; set; }
         public int CareActionId { get; set; }
         public int CareActivityId { get; set; }
         public int EveryDays { get; set; } = 7;
@@ -16,8 +15,8 @@ namespace plant_manager.Data.Models
         public DateOnly? EndsOn { get; set; }
         public int? EndsAfterOccurrences { get; set; }
 
-        public Plant Plant { get; set; } = null!;
         public CareAction CareAction { get; set; } = null!;
         public CareActivity CareActivity { get; set; } = null!;
+        public List<PlantCareScheduleAssignment> Assignments { get; set; } = [];
     }
 }

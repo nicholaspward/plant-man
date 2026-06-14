@@ -6,42 +6,42 @@ import {
   createActionResource,
   createCareAction,
   createCareActivity,
+  createActionLogsBulk,
+  createPlantCareSchedule,
   createPlant,
   createPlantFlag,
   createPlantGroup,
   createPlantLocation,
-  createPlantTaxon,
   createRecipe,
   deleteActionResource,
   deleteCareAction,
   deleteCareActivity,
   deletePlant,
+  deletePlantCareSchedule,
   deletePlantFlag,
   deletePlantGroup,
   deletePlantLocation,
   deletePlantTaxon,
   deleteRecipe,
+  dismissCareTasksBulk,
   downloadSpreadsheetExport,
   importPlantTaxon,
   previewCatalogImport,
-  removePlantCareSchedulesBulk,
   removePlantFlagAssignment,
   resolvePlantFlag,
-  savePlantCareSchedulesBulk,
   searchPlantInfo,
   updateActionResource,
   updateCareAction,
   updateCareActivity,
   updatePlant,
+  updatePlantCareSchedule,
   updatePlantFlag,
   updatePlantGroup,
   updatePlantLocation,
-  updatePlantTaxon,
   updateRecipe,
 } from './api';
-import type { CareTask, CatalogImportResult, Plant, PlantFlag, PlantInfoSearchResult } from './domain';
+import type { BulkCompleteCareTasksPayload, CareTask, CatalogImportResult, DismissCareTasksPayload, Plant, PlantCareScheduleRule, PlantFlag, PlantInfoSearchResult, PlantTaxon } from './domain';
 import {
-  emptyBulkScheduleForm,
   emptyPlantFlagForm,
   toActionPayload,
   toActivityPayload,
@@ -53,7 +53,6 @@ import {
   toPlantPayload,
   toRecipePayload,
   toResourcePayload,
-  toTaxonPayload,
 } from './form-state';
 import type { useAppEditors } from './use-app-editors';
 import type { useDashboardData } from './use-dashboard-data';
@@ -222,29 +221,6 @@ export function useAppActions({
     }
   }
 
-  async function saveTaxon() {
-    if (!editors.taxonForm.name.trim() || !editors.taxonForm.genus.trim() || !editors.taxonForm.species.trim()) {
-      setError('Name, genus, and species are required.');
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const payload = toTaxonPayload(editors.taxonForm);
-      if (editors.editingTaxonId === null) {
-        await createPlantTaxon(payload);
-      } else {
-        await updatePlantTaxon(editors.editingTaxonId, payload);
-      }
-      editors.cancelEditingTaxon();
-      await loadTaxaAndPlants();
-    } catch {
-      setError('Could not save the taxon.');
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
   async function searchTaxonInfo(
     queryOverride?: string,
     options: { updateQuery?: boolean } = {},
@@ -301,7 +277,7 @@ export function useAppActions({
     }
   }
 
-  async function removeTaxon(taxon: Parameters<typeof editors.startEditingTaxon>[0]) {
+  async function removeTaxon(taxon: PlantTaxon) {
     const confirmed = window.confirm(`Delete ${taxon.name}? Taxa used by plants cannot be deleted.`);
     if (!confirmed) {
       return;
@@ -310,9 +286,6 @@ export function useAppActions({
     setIsSaving(true);
     try {
       await deletePlantTaxon(taxon.id);
-      if (editors.editingTaxonId === taxon.id) {
-        editors.cancelEditingTaxon();
-      }
       await loadTaxaAndPlants();
     } catch {
       setError('Could not delete the taxon. It may still be used by a plant.');
@@ -618,29 +591,36 @@ export function useAppActions({
 
     setIsSaving(true);
     try {
-      await savePlantCareSchedulesBulk(toBulkSchedulePayload(editors.bulkScheduleForm));
-      editors.setBulkScheduleForm(emptyBulkScheduleForm);
+      const payload = toBulkSchedulePayload(editors.bulkScheduleForm);
+      if (editors.editingScheduleId === null) {
+        await createPlantCareSchedule(payload);
+      } else {
+        await updatePlantCareSchedule(editors.editingScheduleId, payload);
+      }
+      editors.cancelEditingSchedule();
       await loadPlantsAndCareTasks();
     } catch {
-      setError('Could not apply the care schedule.');
+      setError('Could not save the care schedule.');
     } finally {
       setIsSaving(false);
     }
   }
 
-  async function removeBulkSchedule() {
-    if (!editors.bulkScheduleForm.careActivityId || editors.bulkScheduleForm.plantIds.length === 0) {
-      setError('Select an activity and at least one plant.');
+  async function removeSchedule(schedule: PlantCareScheduleRule) {
+    const confirmed = window.confirm(`Delete ${schedule.action} schedule?`);
+    if (!confirmed) {
       return;
     }
 
     setIsSaving(true);
     try {
-      await removePlantCareSchedulesBulk(toBulkSchedulePayload(editors.bulkScheduleForm));
-      editors.setBulkScheduleForm(emptyBulkScheduleForm);
+      await deletePlantCareSchedule(schedule.id);
+      if (editors.editingScheduleId === schedule.id) {
+        editors.cancelEditingSchedule();
+      }
       await loadPlantsAndCareTasks();
     } catch {
-      setError('Could not remove the care schedule.');
+      setError('Could not delete the care schedule.');
     } finally {
       setIsSaving(false);
     }
@@ -769,6 +749,44 @@ export function useAppActions({
     }
   }
 
+  async function logCare(payload: BulkCompleteCareTasksPayload, requireDueSchedule: boolean) {
+    if (payload.plantIds.length === 0 || !payload.careActivityId) {
+      setError('Select an activity and at least one plant.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      if (requireDueSchedule) {
+        await completeCareTasksBulk(payload);
+      } else {
+        await createActionLogsBulk(payload);
+      }
+      await loadPlantsAndCareTasks();
+    } catch {
+      setError('Could not log care.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function dismissCare(payload: DismissCareTasksPayload) {
+    if (payload.plantIds.length === 0 || !payload.careActivityId) {
+      setError('Select an activity and at least one plant.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await dismissCareTasksBulk(payload);
+      await loadPlantsAndCareTasks();
+    } catch {
+      setError('Could not dismiss care.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return {
     assignFlagToSelectedPlant,
     applyCatalogImportFile,
@@ -776,18 +794,20 @@ export function useAppActions({
     completeBulkTasks,
     completeTask,
     exportSpreadsheet,
+    dismissCare,
     isImportingCatalog,
     hasSearchedPlantInfo,
     isExporting,
     isSearchingPlantInfo,
     isSaving,
+    logCare,
     importTaxonFromPlantInfo,
     plantInfoQuery,
     plantInfoResults,
     removeAction,
     removeActivity,
     removeAssignedPlantFlag,
-    removeBulkSchedule,
+    removeSchedule,
     removeFlagDefinition,
     removeLocation,
     removePlant,
@@ -805,7 +825,6 @@ export function useAppActions({
     savePlantGroup,
     saveRecipe,
     saveResource,
-    saveTaxon,
     searchTaxonInfo,
     previewCatalogImportFile,
     setPlantInfoQuery,

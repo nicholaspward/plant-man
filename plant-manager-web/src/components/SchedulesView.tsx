@@ -1,18 +1,23 @@
 import { useMemo, useState } from 'react';
-import type { CareActivity, Plant, PlantGroup } from '../domain';
+import type { CareActivity, Plant, PlantCareScheduleRule, PlantGroup } from '../domain';
 import type { BulkScheduleFormState } from '../form-state';
 import { SummaryStrip } from './Ui';
 
 type SchedulesViewProps = {
   activities: CareActivity[];
+  editingScheduleId: number | null;
   error: string | null;
   form: BulkScheduleFormState;
   groups: PlantGroup[];
   isLoading: boolean;
   isSaving: boolean;
   plants: Plant[];
+  schedules: PlantCareScheduleRule[];
+  onCancel: () => void;
+  onDelete: (schedule: PlantCareScheduleRule) => void;
+  onEdit: (schedule: PlantCareScheduleRule) => void;
   onFieldChange: (field: keyof BulkScheduleFormState, value: string | string[]) => void;
-  onRemove: () => void;
+  onNew: () => void;
   onSave: () => void;
 };
 
@@ -37,14 +42,19 @@ const weekdayOptions = [
 
 export function SchedulesView({
   activities,
+  editingScheduleId,
   error,
   form,
   groups,
   isLoading,
   isSaving,
   plants,
+  schedules,
+  onCancel,
+  onDelete,
+  onEdit,
   onFieldChange,
-  onRemove,
+  onNew,
   onSave,
 }: SchedulesViewProps) {
   const [plantQuery, setPlantQuery] = useState('');
@@ -67,12 +77,15 @@ export function SchedulesView({
     <>
       <SummaryStrip ariaLabel="Schedules summary">
         <p>{error ?? 'Review current schedules, choose target plants, and apply care intervals.'}</p>
+        <button className="primary-action" type="button" disabled={isSaving} onClick={onNew}>
+          New
+        </button>
       </SummaryStrip>
 
       <section className="work-panel" aria-labelledby="bulk-schedule-heading">
         <div className="section-heading">
           <div>
-            <h2 id="bulk-schedule-heading">Apply activity interval</h2>
+            <h2 id="bulk-schedule-heading">{editingScheduleId === null ? 'New Schedule' : 'Edit Schedule'}</h2>
           </div>
           <div className="schedule-count">
             <span>{selectedGroup ? `${selectedGroup.name}: ${selectedPlants.length} plants` : `${selectedPlants.length} selected`}</span>
@@ -103,27 +116,6 @@ export function SchedulesView({
               value={form.scheduledFor}
               onChange={(event) => onFieldChange('scheduledFor', event.target.value)}
             />
-          </label>
-          <label>
-            Target group
-            <select
-              disabled={isSaving}
-              value={selectedGroupId}
-              onChange={(event) => {
-                const groupId = event.target.value;
-                const group = groups.find((item) => String(item.id) === groupId);
-                setSelectedGroupId(groupId);
-                setPlantQuery('');
-                onFieldChange('plantIds', group ? group.plants.map((plant) => String(plant.id)) : []);
-              }}
-            >
-              <option value="">Individual plants</option>
-              {groups.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name} ({group.plants.length})
-                </option>
-              ))}
-            </select>
           </label>
         </div>
 
@@ -195,6 +187,17 @@ export function SchedulesView({
         {form.recurrenceMode !== 'none' ? (
           <fieldset className="schedule-end-options">
             <legend>Ends</legend>
+            <label className="check-option">
+              <input
+                checked={form.endsMode === 'never'}
+                disabled={isSaving}
+                type="radio"
+                name="endsMode"
+                value="never"
+                onChange={(event) => onFieldChange('endsMode', event.target.value)}
+              />
+              Never
+            </label>
             <label className="check-option">
               <input
                 checked={form.endsMode === 'on'}
@@ -278,16 +281,39 @@ export function SchedulesView({
             </div>
           </div>
 
-          <label className="compact-search">
-            <span className="sr-only">Search target plants</span>
-            <input
-              disabled={isSaving}
-              type="search"
-              value={plantQuery}
-              placeholder="Search plants"
-              onChange={(event) => setPlantQuery(event.target.value)}
-            />
-          </label>
+          <div className="plant-form">
+            <label>
+              Target group
+              <select
+                disabled={isSaving}
+                value={selectedGroupId}
+                onChange={(event) => {
+                  const groupId = event.target.value;
+                  const group = groups.find((item) => String(item.id) === groupId);
+                  setSelectedGroupId(groupId);
+                  setPlantQuery('');
+                  onFieldChange('plantIds', group ? group.plants.map((plant) => String(plant.id)) : []);
+                }}
+              >
+                <option value="">Individual plants</option>
+                {groups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name} ({group.plants.length})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Search plants
+              <input
+                disabled={isSaving}
+                type="search"
+                value={plantQuery}
+                placeholder="Search plants"
+                onChange={(event) => setPlantQuery(event.target.value)}
+              />
+            </label>
+          </div>
 
           <div className="plant-list compact-plant-list">
             {!isLoading && plants.length === 0 ? (
@@ -332,19 +358,61 @@ export function SchedulesView({
               setSelectedGroupId('');
             }}
           >
-            {isSaving ? 'Saving' : selectedGroup ? `Apply to ${selectedGroup.name}` : `Apply to ${form.plantIds.length} plants`}
+            {isSaving ? 'Saving' : 'Save'}
           </button>
           <button
-            className="text-button danger"
+            className="text-button"
             type="button"
-            disabled={isSaving || form.plantIds.length === 0 || !form.careActivityId}
+            disabled={isSaving}
             onClick={() => {
-              onRemove();
+              onCancel();
               setSelectedGroupId('');
             }}
           >
-            Remove from {form.plantIds.length} plants
+            Cancel
           </button>
+        </div>
+      </section>
+
+      <section className="work-panel" aria-labelledby="schedules-list-heading">
+        <div className="section-heading">
+          <div>
+            <h2 id="schedules-list-heading">Schedules</h2>
+          </div>
+        </div>
+
+        <div className="detail-list">
+          {!isLoading && schedules.length === 0 ? (
+            <p className="empty-state">No schedules yet.</p>
+          ) : null}
+
+          {schedules.map((schedule) => (
+            <article className="detail-row schedule-detail-row" key={schedule.id}>
+              <div>
+                <h4>{schedule.action}</h4>
+                <p>{formatRecurrence(schedule)}</p>
+                <p>{formatSchedulePlants(schedule)}</p>
+              </div>
+              <div className="row-actions">
+                <button
+                  className="text-button"
+                  type="button"
+                  disabled={isSaving}
+                  onClick={() => onEdit(schedule)}
+                >
+                  Edit
+                </button>
+                <button
+                  className="text-button danger"
+                  type="button"
+                  disabled={isSaving}
+                  onClick={() => onDelete(schedule)}
+                >
+                  Delete
+                </button>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -396,6 +464,19 @@ function formatPlantScheduleSummary(plant: Plant, selectedActivity?: CareActivit
   }
 
   return `${selectedActivity.name}: ${formatRecurrence(schedule)} - ${schedule.nextCare}`;
+}
+
+function formatSchedulePlants(schedule: PlantCareScheduleRule) {
+  if (schedule.plants.length === 0) {
+    return 'No plants assigned';
+  }
+
+  const names = schedule.plants.map((plant) => plant.nickname);
+  if (names.length <= 4) {
+    return names.join(', ');
+  }
+
+  return `${names.slice(0, 4).join(', ')} + ${names.length - 4} more`;
 }
 
 function filterPlants(plants: Plant[], query: string) {

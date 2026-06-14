@@ -13,20 +13,34 @@ namespace plant_manager.Endpoints
                 var plants = await db.Plants
                     .Include(plant => plant.Taxon)
                     .Include(plant => plant.Location)
-                    .Include(plant => plant.CareSchedules)
+                    .Include(plant => plant.CareScheduleAssignments)
+                    .ThenInclude(assignment => assignment.PlantCareSchedule)
                     .ThenInclude(schedule => schedule.CareAction)
-                    .Include(plant => plant.CareSchedules)
+                    .Include(plant => plant.CareScheduleAssignments)
+                    .ThenInclude(assignment => assignment.PlantCareSchedule)
                     .ThenInclude(schedule => schedule.CareActivity)
                     .ThenInclude(activity => activity.Actions)
                     .ThenInclude(action => action.CareAction)
-                    .Include(plant => plant.CareSchedules)
+                    .Include(plant => plant.CareScheduleAssignments)
+                    .ThenInclude(assignment => assignment.PlantCareSchedule)
                     .ThenInclude(schedule => schedule.CareActivity)
                     .ThenInclude(activity => activity.Actions)
                     .ThenInclude(action => action.Resources)
                     .ThenInclude(resource => resource.ActionResource)
+                    .Include(plant => plant.CareScheduleAssignments)
+                    .ThenInclude(assignment => assignment.PlantCareSchedule)
+                    .ThenInclude(schedule => schedule.Assignments)
+                    .ThenInclude(assignment => assignment.Plant)
+                    .ThenInclude(plant => plant.ActionLogs)
+                    .Include(plant => plant.CareScheduleAssignments)
+                    .ThenInclude(assignment => assignment.PlantCareSchedule)
+                    .ThenInclude(schedule => schedule.Assignments)
+                    .ThenInclude(assignment => assignment.Plant)
+                    .ThenInclude(plant => plant.CareDismissals)
                     .Include(plant => plant.ActionLogs)
                     .ThenInclude(log => log.Resources)
                     .ThenInclude(resource => resource.ActionResource)
+                    .Include(plant => plant.CareDismissals)
                     .Include(plant => plant.Flags)
                     .ThenInclude(flag => flag.Definition)
                     .Include(plant => plant.GroupMemberships)
@@ -42,20 +56,34 @@ namespace plant_manager.Endpoints
                 var plant = await db.Plants
                     .Include(item => item.Taxon)
                     .Include(item => item.Location)
-                    .Include(plant => plant.CareSchedules)
+                    .Include(plant => plant.CareScheduleAssignments)
+                    .ThenInclude(assignment => assignment.PlantCareSchedule)
                     .ThenInclude(schedule => schedule.CareAction)
-                    .Include(plant => plant.CareSchedules)
+                    .Include(plant => plant.CareScheduleAssignments)
+                    .ThenInclude(assignment => assignment.PlantCareSchedule)
                     .ThenInclude(schedule => schedule.CareActivity)
                     .ThenInclude(activity => activity.Actions)
                     .ThenInclude(action => action.CareAction)
-                    .Include(plant => plant.CareSchedules)
+                    .Include(plant => plant.CareScheduleAssignments)
+                    .ThenInclude(assignment => assignment.PlantCareSchedule)
                     .ThenInclude(schedule => schedule.CareActivity)
                     .ThenInclude(activity => activity.Actions)
                     .ThenInclude(action => action.Resources)
                     .ThenInclude(resource => resource.ActionResource)
+                    .Include(plant => plant.CareScheduleAssignments)
+                    .ThenInclude(assignment => assignment.PlantCareSchedule)
+                    .ThenInclude(schedule => schedule.Assignments)
+                    .ThenInclude(assignment => assignment.Plant)
+                    .ThenInclude(plant => plant.ActionLogs)
+                    .Include(plant => plant.CareScheduleAssignments)
+                    .ThenInclude(assignment => assignment.PlantCareSchedule)
+                    .ThenInclude(schedule => schedule.Assignments)
+                    .ThenInclude(assignment => assignment.Plant)
+                    .ThenInclude(plant => plant.CareDismissals)
                     .Include(plant => plant.ActionLogs)
                     .ThenInclude(log => log.Resources)
                     .ThenInclude(resource => resource.ActionResource)
+                    .Include(plant => plant.CareDismissals)
                     .Include(plant => plant.Flags)
                     .ThenInclude(flag => flag.Definition)
                     .Include(plant => plant.GroupMemberships)
@@ -78,6 +106,10 @@ namespace plant_manager.Endpoints
                 if (request.TaxonId is not null && taxon is null)
                 {
                     return Results.BadRequest(new { error = "Taxon was not found." });
+                }
+                if (taxon is not null && !IsGbifTaxon(taxon))
+                {
+                    return Results.BadRequest(new { error = "Taxon must be imported from GBIF." });
                 }
 
                 var location = request.LocationId is null ? null : await db.PlantLocations.FindAsync(request.LocationId);
@@ -122,20 +154,34 @@ namespace plant_manager.Endpoints
                 var plant = await db.Plants
                     .Include(item => item.Taxon)
                     .Include(item => item.Location)
-                    .Include(item => item.CareSchedules)
+                    .Include(item => item.CareScheduleAssignments)
+                    .ThenInclude(assignment => assignment.PlantCareSchedule)
                     .ThenInclude(schedule => schedule.CareAction)
-                    .Include(item => item.CareSchedules)
+                    .Include(item => item.CareScheduleAssignments)
+                    .ThenInclude(assignment => assignment.PlantCareSchedule)
                     .ThenInclude(schedule => schedule.CareActivity)
                     .ThenInclude(activity => activity.Actions)
                     .ThenInclude(action => action.CareAction)
-                    .Include(item => item.CareSchedules)
+                    .Include(item => item.CareScheduleAssignments)
+                    .ThenInclude(assignment => assignment.PlantCareSchedule)
                     .ThenInclude(schedule => schedule.CareActivity)
                     .ThenInclude(activity => activity.Actions)
                     .ThenInclude(action => action.Resources)
                     .ThenInclude(resource => resource.ActionResource)
+                    .Include(item => item.CareScheduleAssignments)
+                    .ThenInclude(assignment => assignment.PlantCareSchedule)
+                    .ThenInclude(schedule => schedule.Assignments)
+                    .ThenInclude(assignment => assignment.Plant)
+                    .ThenInclude(plant => plant.ActionLogs)
+                    .Include(item => item.CareScheduleAssignments)
+                    .ThenInclude(assignment => assignment.PlantCareSchedule)
+                    .ThenInclude(schedule => schedule.Assignments)
+                    .ThenInclude(assignment => assignment.Plant)
+                    .ThenInclude(plant => plant.CareDismissals)
                     .Include(item => item.ActionLogs)
                     .ThenInclude(log => log.Resources)
                     .ThenInclude(resource => resource.ActionResource)
+                    .Include(item => item.CareDismissals)
                     .Include(item => item.Flags)
                     .ThenInclude(flag => flag.Definition)
                     .Include(item => item.GroupMemberships)
@@ -151,6 +197,10 @@ namespace plant_manager.Endpoints
                 if (request.TaxonId is not null && taxon is null)
                 {
                     return Results.BadRequest(new { error = "Taxon was not found." });
+                }
+                if (taxon is not null && !IsGbifTaxon(taxon))
+                {
+                    return Results.BadRequest(new { error = "Taxon must be imported from GBIF." });
                 }
 
                 var location = request.LocationId is null ? null : await db.PlantLocations.FindAsync(request.LocationId);
@@ -212,6 +262,7 @@ namespace plant_manager.Endpoints
                 [
                     new SavePlantCareScheduleRequest(
                         waterActivity.Id,
+                        null,
                         7,
                         null,
                         "weekly",
@@ -253,28 +304,40 @@ namespace plant_manager.Endpoints
             }
 
             var requestedActivityIds = activityIds.ToHashSet();
-            var schedulesToRemove = plant.CareSchedules
-                .Where(schedule => !requestedActivityIds.Contains(schedule.CareActivityId))
+            var assignmentsToRemove = plant.CareScheduleAssignments
+                .Where(assignment => !requestedActivityIds.Contains(assignment.PlantCareSchedule.CareActivityId))
                 .ToList();
-            db.PlantCareSchedules.RemoveRange(schedulesToRemove);
+            db.PlantCareScheduleAssignments.RemoveRange(assignmentsToRemove);
 
             foreach (var requestedSchedule in normalizedSchedules)
             {
                 var activity = activitiesById[requestedSchedule.CareActivityId];
                 var primaryAction = activity.PrimaryAction()!;
-                var schedule = plant.CareSchedules
-                    .FirstOrDefault(item => item.CareActivityId == requestedSchedule.CareActivityId);
-                if (schedule is null)
+                var assignment = plant.CareScheduleAssignments
+                    .FirstOrDefault(item => item.PlantCareSchedule.CareActivityId == requestedSchedule.CareActivityId);
+                var schedule = assignment?.PlantCareSchedule;
+                if (assignment is null)
                 {
                     schedule = new PlantCareSchedule
                     {
-                        PlantId = plant.Id,
                         CareActionId = primaryAction.Id,
                         CareActivityId = activity.Id,
                         CareAction = primaryAction,
-                        CareActivity = activity
+                        CareActivity = activity,
+                        Assignments =
+                        [
+                            new PlantCareScheduleAssignment
+                            {
+                                PlantId = plant.Id,
+                                Plant = plant
+                            }
+                        ]
                     };
-                    plant.CareSchedules.Add(schedule);
+                    db.PlantCareSchedules.Add(schedule);
+                }
+                if (schedule is null)
+                {
+                    continue;
                 }
 
                 schedule.CareActionId = primaryAction.Id;
@@ -295,5 +358,9 @@ namespace plant_manager.Endpoints
 
             return null;
         }
+
+        private static bool IsGbifTaxon(PlantTaxon taxon) =>
+            string.Equals(taxon.ExternalSource, "gbif", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(taxon.ExternalId);
     }
 }

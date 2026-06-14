@@ -18,6 +18,7 @@ namespace plant_manager
 
     public record SavePlantCareScheduleRequest(
         int CareActivityId,
+        IReadOnlyList<int>? PlantIds,
         int? EveryDays,
         DateOnly? ScheduledFor,
         string? RecurrenceMode,
@@ -40,18 +41,6 @@ namespace plant_manager
         string? EndsMode,
         DateOnly? EndsOn,
         int? EndsAfterOccurrences);
-
-    public record SavePlantTaxonRequest(
-        string Name,
-        string Genus,
-        string Species,
-        string? Cultivar,
-        string? Variety,
-        string? Authority,
-        string? Family,
-        string? CommonName,
-        string? ExternalSource,
-        string? ExternalId);
 
     public record ImportPlantTaxonRequest(
         string Source,
@@ -110,12 +99,50 @@ namespace plant_manager
         string? Unit,
         string? Notes);
 
+    public record CareActivityRecipeComponentDto(
+        int ActionResourceId,
+        string Name,
+        decimal? Quantity,
+        string? Unit,
+        string? Notes,
+        int SortOrder)
+    {
+        public static CareActivityRecipeComponentDto FromRecipeComponent(RecipeComponent component) =>
+            new(
+                component.ActionResourceId,
+                component.ActionResource.Name,
+                component.Quantity,
+                component.Unit,
+                component.Notes,
+                component.SortOrder);
+    }
+
+    public record CareActivityRecipeDto(
+        int Id,
+        string Name,
+        string MeasurementMode,
+        IReadOnlyList<CareActivityRecipeComponentDto> Components,
+        string? Notes)
+    {
+        public static CareActivityRecipeDto FromRecipe(Recipe recipe) =>
+            new(
+                recipe.Id,
+                recipe.Name,
+                recipe.MeasurementMode,
+                recipe.Components
+                    .OrderBy(component => component.SortOrder)
+                    .Select(CareActivityRecipeComponentDto.FromRecipeComponent)
+                    .ToList(),
+                recipe.Notes);
+    }
+
     public record CareActivityActionResourceDto(
         int ActionResourceId,
         string Name,
         decimal? Quantity,
         string? Unit,
-        string? Notes)
+        string? Notes,
+        CareActivityRecipeDto? ProducedByRecipe)
     {
         public static CareActivityActionResourceDto FromCareActivityActionResource(
             CareActivityActionResource resource) =>
@@ -124,7 +151,10 @@ namespace plant_manager
                 resource.ActionResource.Name,
                 resource.Quantity,
                 resource.Unit,
-                resource.Notes);
+                resource.Notes,
+                resource.ActionResource.ProducedByRecipe is null
+                    ? null
+                    : CareActivityRecipeDto.FromRecipe(resource.ActionResource.ProducedByRecipe));
     }
 
     public record CareActivityActionDto(
@@ -185,6 +215,12 @@ namespace plant_manager
         DateOnly? PerformedOn,
         string? Notes,
         IReadOnlyList<ActionLogResourceRequest>? Resources);
+
+    public record DismissCareTasksRequest(
+        int CareActivityId,
+        IReadOnlyList<int> PlantIds,
+        DateOnly? DismissedOn,
+        string? Notes);
 
     public record CatalogImportIssue(
         string Sheet,
@@ -401,21 +437,23 @@ namespace plant_manager
         public static PlantDto FromPlant(Plant plant)
         {
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
-            var schedules = plant.CareSchedules
-                .OrderBy(schedule => schedule.CareActivity.Name)
-                .Select(schedule => PlantCareScheduleDto.FromSchedule(
-                    schedule,
-                    GetLatestPerformedOn(plant, schedule.CareActivityId),
+            var schedules = plant.CareScheduleAssignments
+                .OrderBy(assignment => assignment.PlantCareSchedule.CareActivity.Name)
+                .Select(assignment => PlantCareScheduleDto.FromAssignment(
+                    assignment,
+                    GetLatestCareEventOn(plant, assignment.PlantCareSchedule.CareActivityId),
                     today))
                 .ToList();
             var nextCare = schedules
                 .Select(schedule =>
                 {
-                    var source = plant.CareSchedules.First(item => item.Id == schedule.Id);
+                    var source = plant.CareScheduleAssignments
+                        .Select(assignment => assignment.PlantCareSchedule)
+                        .First(item => item.Id == schedule.Id);
                     return PlantCareFormatter.GetNextCareDate(
                         source,
                         schedule.LastPerformedOn,
-                        plant.ActionLogs.Count(log => log.CareActivityId == source.CareActivityId));
+                        GetCompletedOccurrences(plant, source.CareActivityId));
                 })
                 .Where(date => date is not null)
                 .OrderBy(date => date)
@@ -449,11 +487,18 @@ namespace plant_manager
                 schedules);
         }
 
-        private static DateOnly? GetLatestPerformedOn(Plant plant, int careActivityId) =>
+        private static DateOnly? GetLatestCareEventOn(Plant plant, int careActivityId) =>
             plant.ActionLogs
                 .Where(log => log.CareActivityId == careActivityId)
                 .Select(log => (DateOnly?)log.PerformedOn)
+                .Concat(plant.CareDismissals
+                    .Where(dismissal => dismissal.CareActivityId == careActivityId)
+                    .Select(dismissal => (DateOnly?)dismissal.DismissedOn))
                 .Max();
+
+        private static int GetCompletedOccurrences(Plant plant, int careActivityId) =>
+            plant.ActionLogs.Count(log => log.CareActivityId == careActivityId)
+            + plant.CareDismissals.Count(dismissal => dismissal.CareActivityId == careActivityId);
     }
 
     public record PlantCareScheduleDto(
@@ -475,12 +520,13 @@ namespace plant_manager
         string NextCare,
         string Status)
     {
-        public static PlantCareScheduleDto FromSchedule(
-            PlantCareSchedule schedule,
+        public static PlantCareScheduleDto FromAssignment(
+            PlantCareScheduleAssignment assignment,
             DateOnly? lastPerformedOn,
             DateOnly today)
         {
-            var nextCare = PlantCareFormatter.GetNextCareDate(schedule, lastPerformedOn, GetCompletedOccurrences(schedule));
+            var schedule = assignment.PlantCareSchedule;
+            var nextCare = PlantCareFormatter.GetNextCareDate(schedule, lastPerformedOn, GetCompletedOccurrences(assignment));
 
             return new PlantCareScheduleDto(
                 schedule.Id,
@@ -502,8 +548,54 @@ namespace plant_manager
                 PlantCareFormatter.GetStatus(nextCare, today));
         }
 
-        private static int GetCompletedOccurrences(PlantCareSchedule schedule) =>
-            schedule.Plant.ActionLogs.Count(log => log.CareActivityId == schedule.CareActivityId);
+        private static int GetCompletedOccurrences(PlantCareScheduleAssignment assignment) =>
+            assignment.Plant.ActionLogs.Count(log => log.CareActivityId == assignment.PlantCareSchedule.CareActivityId)
+            + assignment.Plant.CareDismissals.Count(dismissal => dismissal.CareActivityId == assignment.PlantCareSchedule.CareActivityId);
+    }
+
+    public record PlantCareScheduleAssignmentDto(
+        int Id,
+        string Nickname)
+    {
+        public static PlantCareScheduleAssignmentDto FromAssignment(PlantCareScheduleAssignment assignment) =>
+            new(assignment.PlantId, assignment.Plant.Nickname);
+    }
+
+    public record PlantCareScheduleRuleDto(
+        int Id,
+        int CareActivityId,
+        int CareActionId,
+        string Action,
+        int EveryDays,
+        DateOnly? ScheduledFor,
+        string RecurrenceMode,
+        int RepeatEvery,
+        string RepeatUnit,
+        string? RepeatOnDays,
+        string EndsMode,
+        DateOnly? EndsOn,
+        int? EndsAfterOccurrences,
+        IReadOnlyList<PlantCareScheduleAssignmentDto> Plants)
+    {
+        public static PlantCareScheduleRuleDto FromSchedule(PlantCareSchedule schedule) =>
+            new(
+                schedule.Id,
+                schedule.CareActivityId,
+                schedule.CareActionId,
+                schedule.CareActivity.Name,
+                schedule.EveryDays,
+                schedule.ScheduledFor,
+                schedule.RecurrenceMode,
+                schedule.RepeatEvery,
+                schedule.RepeatUnit,
+                schedule.RepeatOnDays,
+                schedule.EndsMode,
+                schedule.EndsOn,
+                schedule.EndsAfterOccurrences,
+                schedule.Assignments
+                    .OrderBy(assignment => assignment.Plant.Nickname)
+                    .Select(PlantCareScheduleAssignmentDto.FromAssignment)
+                    .ToList());
     }
 
     internal static class CareActivityExtensions
@@ -532,18 +624,19 @@ namespace plant_manager
         string Due,
         string Status)
     {
-        public static CareTaskDto FromSchedule(
-            PlantCareSchedule schedule,
+        public static CareTaskDto FromAssignment(
+            PlantCareScheduleAssignment assignment,
             DateOnly? lastPerformedOn,
             int completedOccurrences,
             DateOnly today)
         {
+            var schedule = assignment.PlantCareSchedule;
             var nextCare = PlantCareFormatter.GetNextCareDate(schedule, lastPerformedOn, completedOccurrences);
 
             return new CareTaskDto(
                 schedule.Id,
-                schedule.PlantId,
-                schedule.Plant.Nickname,
+                assignment.PlantId,
+                assignment.Plant.Nickname,
                 schedule.CareActivityId,
                 schedule.CareActionId,
                 schedule.CareActivity.Name,

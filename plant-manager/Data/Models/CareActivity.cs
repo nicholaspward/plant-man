@@ -9,6 +9,7 @@ namespace plant_manager.Data.Models
 
         public List<CareActivityAction> Actions { get; set; } = [];
         public List<ActionLog> ActionLogs { get; set; } = [];
+        public List<CareDismissal> CareDismissals { get; set; } = [];
         public List<PlantCareSchedule> PlantCareSchedules { get; set; } = [];
     }
 }

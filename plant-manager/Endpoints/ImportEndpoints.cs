@@ -69,7 +69,7 @@ namespace plant_manager.Endpoints
             {
                 await ImportFlags(workbook, db, context, apply, FlagsSheet, "Flag");
             }
-            await ImportTaxa(workbook, db, context, apply);
+            ImportTaxa(workbook, context);
 
             if (context.Sheets.Count == 0)
             {
@@ -343,87 +343,27 @@ namespace plant_manager.Endpoints
             AddSummary(context, summary);
         }
 
-        private static async Task ImportTaxa(
+        private static void ImportTaxa(
             XLWorkbook workbook,
-            ApplicationDbContext db,
-            ImportContext context,
-            bool apply)
+            ImportContext context)
         {
             if (!TryGetWorksheet(workbook, TaxaSheet, out var worksheet))
             {
                 return;
             }
 
-            var rows = ReadRows(worksheet, TaxaSheet, context, requiredHeaders: ["Name", "Genus", "Species"]);
-            var existing = await db.PlantTaxa.ToListAsync();
-            var byName = existing.ToDictionary(taxon => Key(taxon.Name), StringComparer.OrdinalIgnoreCase);
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var rows = ReadRows(worksheet, TaxaSheet, context, requiredHeaders: []);
             var summary = new MutableSummary(TaxaSheet);
 
             foreach (var row in rows)
             {
-                var name = Required(row, "Name", context);
-                var genus = Required(row, "Genus", context);
-                var species = Required(row, "Species", context);
-                if (name is null || genus is null || species is null)
-                {
-                    summary.Skips++;
-                    continue;
-                }
-
-                var key = Key(name);
-                if (!seen.Add(key))
-                {
-                    Duplicate(row, "Name", context);
-                    summary.Skips++;
-                    continue;
-                }
-
-                var cultivar = Optional(row, "Cultivar");
-                var variety = Optional(row, "Variety");
-                var authority = Optional(row, "Authority");
-                var family = Optional(row, "Family");
-                var commonName = Optional(row, "Common Name", "CommonName");
-                var externalSource = Optional(row, "External Source", "Source");
-                var externalId = Optional(row, "External ID", "External Id", "GBIF ID");
-
-                if (byName.TryGetValue(key, out var taxon))
-                {
-                    summary.Updates++;
-                    if (apply)
-                    {
-                        taxon.Name = name;
-                        taxon.Genus = genus;
-                        taxon.Species = species;
-                        taxon.Cultivar = cultivar;
-                        taxon.Variety = variety;
-                        taxon.Authority = authority;
-                        taxon.Family = family;
-                        taxon.CommonName = commonName;
-                        taxon.ExternalSource = externalSource;
-                        taxon.ExternalId = externalId;
-                    }
-                }
-                else
-                {
-                    summary.Creates++;
-                    if (apply)
-                    {
-                        db.PlantTaxa.Add(new PlantTaxon
-                        {
-                            Name = name,
-                            Genus = genus,
-                            Species = species,
-                            Cultivar = cultivar,
-                            Variety = variety,
-                            Authority = authority,
-                            Family = family,
-                            CommonName = commonName,
-                            ExternalSource = externalSource,
-                            ExternalId = externalId
-                        });
-                    }
-                }
+                context.Issues.Add(new CatalogImportIssue(
+                    TaxaSheet,
+                    row.Row.RowNumber(),
+                    "Taxa",
+                    "Taxa must be imported from GBIF search results, not spreadsheet rows.",
+                    "error"));
+                summary.Skips++;
             }
 
             AddSummary(context, summary);

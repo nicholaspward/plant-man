@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ActionsView } from './components/ActionsView';
 import { ActivitiesView } from './components/ActivitiesView';
+import { CareView } from './components/CareView';
 import { FlagsView } from './components/FlagsView';
 import { GroupsView } from './components/GroupsView';
 import { HomeView } from './components/HomeView';
@@ -35,6 +36,7 @@ export function App() {
     loadPlantsAndCareTasks,
     loadRecipesAndResources,
     loadTaxaAndPlants,
+    plantCareSchedules,
     plantFlagDefinitions,
     plantGroups,
     plantLocations,
@@ -64,7 +66,6 @@ export function App() {
     activePlantGroup,
     activeRecipe,
     activeResource,
-    activeTaxon,
     activityForm,
     bulkScheduleForm,
     cancelEditing,
@@ -75,7 +76,8 @@ export function App() {
     cancelEditingPlantGroup,
     cancelEditingRecipe,
     cancelEditingResource,
-    cancelEditingTaxon,
+    cancelEditingSchedule,
+    editingScheduleId,
     flagDefinitionForm,
     form,
     isActionEditorOpen,
@@ -86,7 +88,6 @@ export function App() {
     isPlantGroupEditorOpen,
     isRecipeEditorOpen,
     isResourceEditorOpen,
-    isTaxonEditorOpen,
     locationForm,
     openPlantDetail,
     plantFlagForm,
@@ -118,8 +119,6 @@ export function App() {
     startAddingPlantGroup,
     startAddingRecipe,
     startAddingResource,
-    startAddingTaxon,
-    startAddingTaxonFromPlantInfo,
     startEditingAction,
     startEditingActivity,
     startEditingFlagDefinition,
@@ -127,8 +126,8 @@ export function App() {
     startEditingPlantGroup,
     startEditingRecipe,
     startEditingResource,
-    startEditingTaxon,
-    taxonForm,
+    startEditingSchedule,
+    startNewSchedule,
     updateActionForm,
     updateActivityForm,
     updateBulkScheduleForm,
@@ -139,7 +138,6 @@ export function App() {
     updatePlantGroupForm,
     updateRecipeForm,
     updateResourceForm,
-    updateTaxonForm,
   } = editors;
   const {
     assignFlagToSelectedPlant,
@@ -147,11 +145,13 @@ export function App() {
     catalogImportResult,
     completeBulkTasks,
     completeTask,
+    dismissCare,
     exportSpreadsheet,
     isExporting,
     isImportingCatalog,
     isSearchingPlantInfo,
     isSaving,
+    logCare,
     importTaxonFromPlantInfo,
     hasSearchedPlantInfo,
     plantInfoQuery,
@@ -159,7 +159,7 @@ export function App() {
     removeAction,
     removeActivity,
     removeAssignedPlantFlag,
-    removeBulkSchedule,
+    removeSchedule,
     removeFlagDefinition,
     removeLocation,
     removePlant,
@@ -177,7 +177,6 @@ export function App() {
     savePlantGroup,
     saveRecipe,
     saveResource,
-    saveTaxon,
     searchTaxonInfo,
     previewCatalogImportFile,
     setPlantInfoQuery,
@@ -240,6 +239,13 @@ export function App() {
               <h3>Care</h3>
               <button
                 type="button"
+                aria-current={view === 'care' ? 'page' : undefined}
+                onClick={() => setView('care')}
+              >
+                Care
+              </button>
+              <button
+                type="button"
                 aria-current={view === 'schedules' ? 'page' : undefined}
                 onClick={() => setView('schedules')}
               >
@@ -261,7 +267,7 @@ export function App() {
                 aria-current={view === 'taxa' ? 'page' : undefined}
                 onClick={() => setView('taxa')}
               >
-                Plant Taxa
+                Taxa
               </button>
               <button
                 type="button"
@@ -303,7 +309,7 @@ export function App() {
                 aria-current={view === 'flags' ? 'page' : undefined}
                 onClick={() => setView('flags')}
               >
-                Plant Flags
+                Flags
               </button>
             </div>
           </nav>
@@ -365,34 +371,41 @@ export function App() {
                 error={error}
                 form={bulkScheduleForm}
                 groups={plantGroups}
+                editingScheduleId={editingScheduleId}
                 isLoading={isLoading}
                 isSaving={isSaving}
                 plants={plants}
+                schedules={plantCareSchedules}
+                onCancel={cancelEditingSchedule}
+                onDelete={removeSchedule}
+                onEdit={startEditingSchedule}
                 onFieldChange={updateBulkScheduleForm}
-                onRemove={() => void removeBulkSchedule()}
+                onNew={startNewSchedule}
                 onSave={() => void saveBulkSchedule()}
+              />
+            ) : view === 'care' ? (
+              <CareView
+                activities={careActivities}
+                careTasks={careTasks}
+                error={error}
+                isLoading={isLoading}
+                isSaving={isSaving}
+                plants={plants}
+                onDismissCare={(payload) => void dismissCare(payload)}
+                onLogCare={(payload, requireDueSchedule) => void logCare(payload, requireDueSchedule)}
               />
             ) : view === 'taxa' ? (
               <TaxaView
-                activeTaxonName={activeTaxon?.name}
                 error={error}
-                form={taxonForm}
                 hasSearched={hasSearchedPlantInfo}
-                isEditorOpen={isTaxonEditorOpen}
                 isLoading={isLoading}
                 isSaving={isSaving}
                 selectedTaxon={selectedTaxon}
                 taxa={plantTaxa}
-                onCancel={cancelEditingTaxon}
                 onCloseDetail={() => setSelectedTaxonId(null)}
                 onDelete={(taxon) => void removeTaxon(taxon)}
-                onEdit={startEditingTaxon}
-                onFieldChange={updateTaxonForm}
                 onImportResult={(result) => void importTaxonFromPlantInfo(result)}
-                onNew={startAddingTaxon}
                 onOpenDetail={(taxon) => setSelectedTaxonId(taxon.id)}
-                onPrefillResult={startAddingTaxonFromPlantInfo}
-                onSave={() => void saveTaxon()}
                 onSearch={(query) => void searchTaxonInfo(query)}
                 onSearchQueryChange={setPlantInfoQuery}
                 plantInfoResults={plantInfoResults}
@@ -537,12 +550,10 @@ export function App() {
               <HomeView
                 careTasks={careTasks}
                 error={error}
-                groups={plantGroups}
                 isLoading={isLoading}
                 plants={plants}
-                onCompleteBulkTasks={(tasks) => void completeBulkTasks(tasks)}
-                onCompleteTask={(task) => void completeTask(task)}
-                onOpenPlant={openPlantDetail}
+                onOpenCare={() => setView('care')}
+                onOpenPlants={() => setView('plant-management')}
               />
             )}
           </main>

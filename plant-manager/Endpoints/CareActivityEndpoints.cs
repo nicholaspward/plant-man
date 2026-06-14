@@ -16,6 +16,9 @@ namespace plant_manager.Endpoints
                     .Include(activity => activity.Actions)
                     .ThenInclude(action => action.Resources)
                     .ThenInclude(resource => resource.ActionResource)
+                    .ThenInclude(resource => resource.ProducedByRecipe)
+                    .ThenInclude(recipe => recipe!.Components)
+                    .ThenInclude(component => component.ActionResource)
                     .OrderBy(activity => activity.Name)
                     .Select(activity => CareActivityDto.FromCareActivity(activity))
                     .ToListAsync();
@@ -59,6 +62,9 @@ namespace plant_manager.Endpoints
                     .Include(item => item.Actions)
                     .ThenInclude(action => action.Resources)
                     .ThenInclude(resource => resource.ActionResource)
+                    .ThenInclude(resource => resource.ProducedByRecipe)
+                    .ThenInclude(recipe => recipe!.Components)
+                    .ThenInclude(component => component.ActionResource)
                     .FirstOrDefaultAsync(item => item.Id == id);
                 if (activity is null)
                 {

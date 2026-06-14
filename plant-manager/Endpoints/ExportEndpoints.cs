@@ -43,7 +43,8 @@ namespace plant_manager.Endpoints
                 .ThenInclude(flag => flag.Definition)
                 .Include(plant => plant.GroupMemberships)
                 .ThenInclude(membership => membership.PlantGroup)
-                .Include(plant => plant.CareSchedules)
+                .Include(plant => plant.CareScheduleAssignments)
+                .ThenInclude(assignment => assignment.PlantCareSchedule)
                 .ThenInclude(schedule => schedule.CareActivity)
                 .Include(plant => plant.ActionLogs)
                 .AsSplitQuery()
@@ -65,7 +66,7 @@ namespace plant_manager.Endpoints
                         .Where(flag => flag.ResolvedOn == null)
                         .OrderBy(flag => flag.Definition.Name)
                         .Select(flag => flag.Definition.Name)),
-                    plant.CareSchedules.Count,
+                    plant.CareScheduleAssignments.Count,
                     plant.ActionLogs.Count
                 })
                 .ToList();
@@ -87,18 +88,23 @@ namespace plant_manager.Endpoints
         private static async Task AddCareSchedulesSheet(XLWorkbook workbook, ApplicationDbContext db)
         {
             var schedules = await db.PlantCareSchedules
-                .Include(schedule => schedule.Plant)
                 .Include(schedule => schedule.CareActivity)
                 .Include(schedule => schedule.CareAction)
-                .OrderBy(schedule => schedule.Plant.Nickname)
-                .ThenBy(schedule => schedule.CareActivity.Name)
+                .Include(schedule => schedule.Assignments)
+                .ThenInclude(assignment => assignment.Plant)
+                .OrderBy(schedule => schedule.CareActivity.Name)
+                .ThenBy(schedule => schedule.Id)
                 .ToListAsync();
             var rows = schedules
                 .Select(schedule => new object?[]
                 {
                     schedule.Id,
-                    schedule.PlantId,
-                    schedule.Plant.Nickname,
+                    string.Join(", ", schedule.Assignments
+                        .OrderBy(assignment => assignment.Plant.Nickname)
+                        .Select(assignment => assignment.PlantId)),
+                    string.Join(", ", schedule.Assignments
+                        .OrderBy(assignment => assignment.Plant.Nickname)
+                        .Select(assignment => assignment.Plant.Nickname)),
                     schedule.CareActivity.Name,
                     schedule.CareAction.Name,
                     schedule.EveryDays,
@@ -115,8 +121,8 @@ namespace plant_manager.Endpoints
 
             AddSheet(workbook, "Care Schedules", [
                 "ID",
-                "Plant ID",
-                "Plant",
+                "Plant IDs",
+                "Plants",
                 "Activity",
                 "Primary Action",
                 "Every Days",

@@ -18,64 +18,6 @@ namespace plant_manager.Endpoints
                 return Results.Ok(taxa);
             });
 
-            app.MapPost("/api/plant-taxa", async (SavePlantTaxonRequest request, ApplicationDbContext db) =>
-            {
-                var validation = ValidateTaxonRequest(request);
-                if (validation.Error is not null)
-                {
-                    return EndpointHelpers.BadRequest(validation.Error);
-                }
-
-                var taxon = new PlantTaxon
-                {
-                    Name = validation.Name,
-                    Genus = validation.Genus,
-                    Species = validation.Species,
-                    Cultivar = validation.Cultivar,
-                    Variety = validation.Variety,
-                    Authority = validation.Authority,
-                    Family = validation.Family,
-                    CommonName = validation.CommonName,
-                    ExternalSource = validation.ExternalSource,
-                    ExternalId = validation.ExternalId
-                };
-
-                db.PlantTaxa.Add(taxon);
-                await db.SaveChangesAsync();
-
-                return Results.Created($"/api/plant-taxa/{taxon.Id}", PlantTaxonDto.FromTaxon(taxon));
-            });
-
-            app.MapPut("/api/plant-taxa/{id:int}", async (int id, SavePlantTaxonRequest request, ApplicationDbContext db) =>
-            {
-                var validation = ValidateTaxonRequest(request);
-                if (validation.Error is not null)
-                {
-                    return EndpointHelpers.BadRequest(validation.Error);
-                }
-
-                var taxon = await db.PlantTaxa.FindAsync(id);
-                if (taxon is null)
-                {
-                    return Results.NotFound();
-                }
-
-                taxon.Name = validation.Name;
-                taxon.Genus = validation.Genus;
-                taxon.Species = validation.Species;
-                taxon.Cultivar = validation.Cultivar;
-                taxon.Variety = validation.Variety;
-                taxon.Authority = validation.Authority;
-                taxon.Family = validation.Family;
-                taxon.CommonName = validation.CommonName;
-                taxon.ExternalSource = validation.ExternalSource;
-                taxon.ExternalId = validation.ExternalId;
-
-                await db.SaveChangesAsync();
-
-                return Results.Ok(PlantTaxonDto.FromTaxon(taxon));
-            });
-
             app.MapPost("/api/plant-taxa/import", async (ImportPlantTaxonRequest request, ApplicationDbContext db) =>
             {
                 if (!string.Equals(request.Source, "gbif", StringComparison.OrdinalIgnoreCase))
@@ -149,40 +91,6 @@ namespace plant_manager.Endpoints
 
                 return Results.NoContent();
             });
-        }
-
-        private static (
-            string Name,
-            string Genus,
-            string Species,
-            string? Cultivar,
-            string? Variety,
-            string? Authority,
-            string? Family,
-            string? CommonName,
-            string? ExternalSource,
-            string? ExternalId,
-            string? Error) ValidateTaxonRequest(SavePlantTaxonRequest request)
-        {
-            if (!EndpointHelpers.TryNormalizeRequired(request.Name, "Name, genus, and species are required.", out var name, out _)
-                || !EndpointHelpers.TryNormalizeRequired(request.Genus, "Name, genus, and species are required.", out var genus, out _)
-                || !EndpointHelpers.TryNormalizeRequired(request.Species, "Name, genus, and species are required.", out var species, out _))
-            {
-                return (string.Empty, string.Empty, string.Empty, null, null, null, null, null, null, null, "Name, genus, and species are required.");
-            }
-
-            return (
-                name,
-                genus,
-                species,
-                EndpointHelpers.NormalizeOptional(request.Cultivar),
-                EndpointHelpers.NormalizeOptional(request.Variety),
-                EndpointHelpers.NormalizeOptional(request.Authority),
-                EndpointHelpers.NormalizeOptional(request.Family),
-                EndpointHelpers.NormalizeOptional(request.CommonName),
-                EndpointHelpers.NormalizeOptional(request.ExternalSource),
-                EndpointHelpers.NormalizeOptional(request.ExternalId),
-                null);
         }
 
         private static string? FirstScientificNamePart(string scientificName) =>

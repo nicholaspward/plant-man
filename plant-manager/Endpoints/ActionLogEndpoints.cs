@@ -76,6 +76,80 @@ namespace plant_manager.Endpoints
                 return Results.Created($"/api/action-logs/{log.Id}", ActionLogDto.FromActionLog(log));
             });
 
+            app.MapPost("/api/action-logs/bulk", async (BulkCompleteCareTasksRequest request, ApplicationDbContext db) =>
+            {
+                var plantIds = request.PlantIds
+                    .Where(id => id > 0)
+                    .Distinct()
+                    .ToList();
+                if (plantIds.Count == 0)
+                {
+                    return Results.BadRequest(new { error = "At least one plant is required." });
+                }
+
+                var plants = await db.Plants
+                    .Where(plant => plantIds.Contains(plant.Id))
+                    .OrderBy(plant => plant.Nickname)
+                    .ToListAsync();
+                if (plants.Count != plantIds.Count)
+                {
+                    return Results.BadRequest(new { error = "One or more plants were not found." });
+                }
+
+                var activity = await db.CareActivities
+                    .Include(item => item.Actions)
+                    .ThenInclude(action => action.CareAction)
+                    .Include(item => item.Actions)
+                    .ThenInclude(action => action.Resources)
+                    .ThenInclude(resource => resource.ActionResource)
+                    .FirstOrDefaultAsync(item => item.Id == request.CareActivityId);
+                if (activity is null)
+                {
+                    return Results.BadRequest(new { error = "Care activity was not found." });
+                }
+
+                var primaryAction = activity.PrimaryAction();
+                if (primaryAction is null)
+                {
+                    return Results.BadRequest(new { error = "Care activity has no configured actions." });
+                }
+
+                var performedOn = request.PerformedOn ?? DateOnly.FromDateTime(DateTime.UtcNow);
+                var notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
+                var (resources, resourceError) = await BuildLogResources(request.Resources, activity, db);
+                if (resourceError is not null)
+                {
+                    return Results.BadRequest(new { error = resourceError });
+                }
+
+                var logs = plants
+                    .Select(plant => new ActionLog
+                    {
+                        PlantId = plant.Id,
+                        CareActionId = primaryAction.Id,
+                        CareActivityId = activity.Id,
+                        CareAction = primaryAction,
+                        CareActivity = activity,
+                        ActionNameSnapshot = activity.Name,
+                        Notes = notes,
+                        PerformedOn = performedOn,
+                        Resources = resources
+                            .Select(resource => new ActionLogResource
+                            {
+                                ActionResourceId = resource.ActionResourceId,
+                                Quantity = resource.Quantity,
+                                Unit = resource.Unit
+                            })
+                            .ToList()
+                    })
+                    .ToList();
+
+                db.ActionLogs.AddRange(logs);
+                await db.SaveChangesAsync();
+
+                return Results.Ok(new { completed = logs.Count });
+            });
+
             app.MapPut("/api/action-logs/{id:int}", async (int id, UpdateActionLogRequest request, ApplicationDbContext db) =>
             {
                 var log = await db.ActionLogs

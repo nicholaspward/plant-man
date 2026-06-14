@@ -109,8 +109,8 @@ namespace plant_manager.Data.Migrations
                     Authority = table.Column<string>(type: "TEXT", maxLength: 120, nullable: true),
                     Family = table.Column<string>(type: "TEXT", maxLength: 120, nullable: true),
                     CommonName = table.Column<string>(type: "TEXT", maxLength: 120, nullable: true),
-                    ExternalSource = table.Column<string>(type: "TEXT", maxLength: 40, nullable: true),
-                    ExternalId = table.Column<string>(type: "TEXT", maxLength: 80, nullable: true)
+                    ExternalSource = table.Column<string>(type: "TEXT", maxLength: 40, nullable: false),
+                    ExternalId = table.Column<string>(type: "TEXT", maxLength: 80, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -162,6 +162,41 @@ namespace plant_manager.Data.Migrations
                         principalTable: "CareActivities",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PlantCareSchedules",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    CareActionId = table.Column<int>(type: "INTEGER", nullable: false),
+                    CareActivityId = table.Column<int>(type: "INTEGER", nullable: false),
+                    EveryDays = table.Column<int>(type: "INTEGER", nullable: false),
+                    ScheduledFor = table.Column<DateOnly>(type: "TEXT", nullable: true),
+                    RecurrenceMode = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                    RepeatEvery = table.Column<int>(type: "INTEGER", nullable: false),
+                    RepeatUnit = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                    RepeatOnDays = table.Column<string>(type: "TEXT", maxLength: 40, nullable: true),
+                    EndsMode = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                    EndsOn = table.Column<DateOnly>(type: "TEXT", nullable: true),
+                    EndsAfterOccurrences = table.Column<int>(type: "INTEGER", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PlantCareSchedules", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PlantCareSchedules_CareActions_CareActionId",
+                        column: x => x.CareActionId,
+                        principalTable: "CareActions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PlantCareSchedules_CareActivities_CareActivityId",
+                        column: x => x.CareActivityId,
+                        principalTable: "CareActivities",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -285,41 +320,51 @@ namespace plant_manager.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "PlantCareSchedules",
+                name: "CareDismissals",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     PlantId = table.Column<int>(type: "INTEGER", nullable: false),
-                    CareActionId = table.Column<int>(type: "INTEGER", nullable: false),
                     CareActivityId = table.Column<int>(type: "INTEGER", nullable: false),
-                    EveryDays = table.Column<int>(type: "INTEGER", nullable: false),
-                    ScheduledFor = table.Column<DateOnly>(type: "TEXT", nullable: true),
-                    RecurrenceMode = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    RepeatEvery = table.Column<int>(type: "INTEGER", nullable: false),
-                    RepeatUnit = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    RepeatOnDays = table.Column<string>(type: "TEXT", maxLength: 40, nullable: true),
-                    EndsMode = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
-                    EndsOn = table.Column<DateOnly>(type: "TEXT", nullable: true),
-                    EndsAfterOccurrences = table.Column<int>(type: "INTEGER", nullable: true)
+                    DismissedOn = table.Column<DateOnly>(type: "TEXT", nullable: false),
+                    Notes = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_PlantCareSchedules", x => x.Id);
+                    table.PrimaryKey("PK_CareDismissals", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_PlantCareSchedules_CareActions_CareActionId",
-                        column: x => x.CareActionId,
-                        principalTable: "CareActions",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_PlantCareSchedules_CareActivities_CareActivityId",
+                        name: "FK_CareDismissals_CareActivities_CareActivityId",
                         column: x => x.CareActivityId,
                         principalTable: "CareActivities",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_PlantCareSchedules_Plants_PlantId",
+                        name: "FK_CareDismissals_Plants_PlantId",
+                        column: x => x.PlantId,
+                        principalTable: "Plants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PlantCareScheduleAssignments",
+                columns: table => new
+                {
+                    PlantCareScheduleId = table.Column<int>(type: "INTEGER", nullable: false),
+                    PlantId = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PlantCareScheduleAssignments", x => new { x.PlantCareScheduleId, x.PlantId });
+                    table.ForeignKey(
+                        name: "FK_PlantCareScheduleAssignments_PlantCareSchedules_PlantCareScheduleId",
+                        column: x => x.PlantCareScheduleId,
+                        principalTable: "PlantCareSchedules",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_PlantCareScheduleAssignments_Plants_PlantId",
                         column: x => x.PlantId,
                         principalTable: "Plants",
                         principalColumn: "Id",
@@ -460,6 +505,22 @@ namespace plant_manager.Data.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_CareDismissals_CareActivityId",
+                table: "CareDismissals",
+                column: "CareActivityId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CareDismissals_PlantId_CareActivityId_DismissedOn",
+                table: "CareDismissals",
+                columns: new[] { "PlantId", "CareActivityId", "DismissedOn" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PlantCareScheduleAssignments_PlantId_PlantCareScheduleId",
+                table: "PlantCareScheduleAssignments",
+                columns: new[] { "PlantId", "PlantCareScheduleId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PlantCareSchedules_CareActionId",
                 table: "PlantCareSchedules",
                 column: "CareActionId");
@@ -468,17 +529,6 @@ namespace plant_manager.Data.Migrations
                 name: "IX_PlantCareSchedules_CareActivityId",
                 table: "PlantCareSchedules",
                 column: "CareActivityId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PlantCareSchedules_PlantId_CareActionId",
-                table: "PlantCareSchedules",
-                columns: new[] { "PlantId", "CareActionId" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PlantCareSchedules_PlantId_CareActivityId",
-                table: "PlantCareSchedules",
-                columns: new[] { "PlantId", "CareActivityId" },
-                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_PlantFlagDefinitions_Name",
@@ -526,7 +576,8 @@ namespace plant_manager.Data.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_PlantTaxa_ExternalSource_ExternalId",
                 table: "PlantTaxa",
-                columns: new[] { "ExternalSource", "ExternalId" });
+                columns: new[] { "ExternalSource", "ExternalId" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_RecipeComponents_ActionResourceId",
@@ -562,7 +613,10 @@ namespace plant_manager.Data.Migrations
                 name: "CareActivityActionResources");
 
             migrationBuilder.DropTable(
-                name: "PlantCareSchedules");
+                name: "CareDismissals");
+
+            migrationBuilder.DropTable(
+                name: "PlantCareScheduleAssignments");
 
             migrationBuilder.DropTable(
                 name: "PlantFlags");
@@ -578,6 +632,9 @@ namespace plant_manager.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "CareActivityActions");
+
+            migrationBuilder.DropTable(
+                name: "PlantCareSchedules");
 
             migrationBuilder.DropTable(
                 name: "PlantFlagDefinitions");

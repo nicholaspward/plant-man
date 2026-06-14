@@ -1,15 +1,11 @@
 import { useMemo, useState } from 'react';
 import type { PlantInfoSearchResult, PlantTaxon } from '../domain';
-import type { TaxonFormState } from '../form-state';
 import { formatTaxon } from '../form-state';
-import { CatalogFilterSection, EntityList, RecordActions, SummaryActionButton, SummaryStrip } from './Ui';
+import { CatalogFilterSection, EntityList, SummaryStrip } from './Ui';
 
 type TaxaViewProps = {
-  activeTaxonName?: string;
   error: string | null;
-  form: TaxonFormState;
   hasSearched: boolean;
-  isEditorOpen: boolean;
   isLoading: boolean;
   isSaving: boolean;
   isSearching: boolean;
@@ -17,16 +13,10 @@ type TaxaViewProps = {
   searchQuery: string;
   selectedTaxon?: PlantTaxon;
   taxa: PlantTaxon[];
-  onCancel: () => void;
   onCloseDetail: () => void;
   onDelete: (taxon: PlantTaxon) => void;
-  onEdit: (taxon: PlantTaxon) => void;
-  onFieldChange: (field: keyof TaxonFormState, value: string) => void;
   onImportResult: (result: PlantInfoSearchResult) => void;
-  onNew: () => void;
   onOpenDetail: (taxon: PlantTaxon) => void;
-  onPrefillResult: (result: PlantInfoSearchResult) => void;
-  onSave: () => void;
   onSearch: (query?: string) => void;
   onSearchQueryChange: (value: string) => void;
 };
@@ -40,11 +30,8 @@ function getPlantInfoSubtitle(result: PlantInfoSearchResult) {
 }
 
 export function TaxaView({
-  activeTaxonName,
   error,
-  form,
   hasSearched,
-  isEditorOpen,
   isLoading,
   isSaving,
   isSearching,
@@ -52,16 +39,10 @@ export function TaxaView({
   searchQuery,
   selectedTaxon,
   taxa,
-  onCancel,
   onCloseDetail,
   onDelete,
-  onEdit,
-  onFieldChange,
   onImportResult,
-  onNew,
   onOpenDetail,
-  onPrefillResult,
-  onSave,
   onSearch,
   onSearchQueryChange,
 }: TaxaViewProps) {
@@ -83,9 +64,8 @@ export function TaxaView({
     <>
       <SummaryStrip
         ariaLabel="Taxa summary"
-        action={<SummaryActionButton onClick={onNew}>New</SummaryActionButton>}
       >
-        <p>{error ?? 'Create and maintain the plant identities used by your collection.'}</p>
+        <p>{error ?? 'Import GBIF-backed plant identities for use in your collection.'}</p>
       </SummaryStrip>
 
       <CatalogFilterSection
@@ -101,14 +81,14 @@ export function TaxaView({
         isLoading={isLoading}
         items={filteredTaxa}
         renderActions={(taxon) => (
-          <RecordActions
-            deleteLabel={`Delete ${taxon.name}`}
-            editLabel={`Edit ${taxon.name}`}
-            viewLabel={`View ${taxon.name}`}
-            onDelete={() => onDelete(taxon)}
-            onEdit={() => onEdit(taxon)}
-            onView={() => onOpenDetail(taxon)}
-          />
+          <>
+            <button className="icon-button compact" type="button" aria-label={`View ${taxon.name}`} onClick={() => onOpenDetail(taxon)}>
+              View
+            </button>
+            <button className="icon-button compact danger" type="button" aria-label={`Delete ${taxon.name}`} onClick={() => onDelete(taxon)}>
+              Delete
+            </button>
+          </>
         )}
         renderContent={(taxon) => <h3>{formatTaxon(taxon)}</h3>}
       />
@@ -116,7 +96,7 @@ export function TaxaView({
       <section className="work-panel" aria-labelledby="taxa-search-heading">
         <div className="section-heading">
           <div>
-            <h2 id="taxa-search-heading">Search plant info</h2>
+            <h2 id="taxa-search-heading">Search GBIF</h2>
           </div>
         </div>
 
@@ -187,9 +167,6 @@ export function TaxaView({
                   </dl>
                 </div>
                 <div className="row-actions">
-                  <button className="small-action" type="button" onClick={() => onPrefillResult(result)}>
-                    Prefill
-                  </button>
                   <button className="small-action" type="button" disabled={isSaving} onClick={() => onImportResult(result)}>
                     Import
                   </button>
@@ -202,16 +179,13 @@ export function TaxaView({
         ) : null}
       </section>
 
-      {selectedTaxon && !isEditorOpen ? (
+      {selectedTaxon ? (
         <section className="work-panel" aria-labelledby="taxon-detail-heading">
           <div className="section-heading">
             <div>
               <h2 id="taxon-detail-heading">{formatTaxon(selectedTaxon)}</h2>
             </div>
             <div className="row-actions">
-              <button className="icon-button compact" type="button" aria-label={`Edit ${selectedTaxon.name}`} onClick={() => onEdit(selectedTaxon)}>
-                Edit
-              </button>
               <button className="icon-button compact" type="button" aria-label="Close taxon detail" onClick={onCloseDetail}>
                 Close
               </button>
@@ -252,87 +226,6 @@ export function TaxaView({
             </div>
           </div>
         </section>
-      ) : null}
-
-      {isEditorOpen ? (
-      <section className="work-panel" aria-labelledby="taxon-editor-heading">
-        <div className="section-heading">
-          <div>
-            <h2 id="taxon-editor-heading">{activeTaxonName ?? 'New taxon'}</h2>
-          </div>
-          <button className="icon-button compact" type="button" aria-label="Close panel" onClick={onCancel}>
-            Close
-          </button>
-        </div>
-
-        <div className="plant-form">
-          <label>
-            Common name
-            <input
-              value={form.name}
-              onChange={(event) => onFieldChange('name', event.target.value)}
-            />
-          </label>
-          <label>
-            Genus
-            <input
-              value={form.genus}
-              onChange={(event) => onFieldChange('genus', event.target.value)}
-            />
-          </label>
-          <label>
-            Species
-            <input
-              value={form.species}
-              onChange={(event) => onFieldChange('species', event.target.value)}
-            />
-          </label>
-          <label>
-            Cultivar
-            <input
-              value={form.cultivar}
-              onChange={(event) => onFieldChange('cultivar', event.target.value)}
-            />
-          </label>
-          <label>
-            Variety
-            <input
-              value={form.variety}
-              onChange={(event) => onFieldChange('variety', event.target.value)}
-            />
-          </label>
-          <label>
-            Authority
-            <input
-              value={form.authority}
-              onChange={(event) => onFieldChange('authority', event.target.value)}
-            />
-          </label>
-          <label>
-            Family
-            <input
-              value={form.family}
-              onChange={(event) => onFieldChange('family', event.target.value)}
-            />
-          </label>
-          <label>
-            GBIF ID
-            <input
-              value={form.externalId}
-              onChange={(event) => onFieldChange('externalId', event.target.value)}
-            />
-          </label>
-        </div>
-
-        <div className="form-actions">
-          <button className="primary-action" type="button" disabled={isSaving} onClick={onSave}>
-            {isSaving ? 'Saving' : 'Save'}
-          </button>
-          <button className="text-button" type="button" onClick={onCancel}>
-            Cancel
-          </button>
-        </div>
-      </section>
       ) : null}
 
     </>

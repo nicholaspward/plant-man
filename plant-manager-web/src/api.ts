@@ -9,9 +9,11 @@ import type {
   BulkCompleteCareTasksPayload,
   CareTask,
   BulkPlantCareSchedulePayload,
+  DismissCareTasksPayload,
   Recipe,
   RecipePayload,
   Plant,
+  PlantCareScheduleRule,
   PlantInfoSearchResult,
   AssignPlantFlagPayload,
   PlantPayload,
@@ -23,7 +25,6 @@ import type {
   PlantLocation,
   PlantLocationPayload,
   PlantTaxon,
-  PlantTaxonPayload,
 } from './domain';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
@@ -157,23 +158,9 @@ export async function deletePlantGroup(id: number) {
   });
 }
 
-export async function createPlantTaxon(payload: PlantTaxonPayload) {
-  return request<PlantTaxon>('/api/plant-taxa', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-}
-
 export async function importPlantTaxon(payload: PlantInfoSearchResult) {
   return request<PlantTaxon>('/api/plant-taxa/import', {
     method: 'POST',
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function updatePlantTaxon(id: number, payload: PlantTaxonPayload) {
-  return request<PlantTaxon>(`/api/plant-taxa/${id}`, {
-    method: 'PUT',
     body: JSON.stringify(payload),
   });
 }
@@ -347,22 +334,46 @@ export async function getCareTasks() {
   return request<CareTask[]>('/api/care-tasks/upcoming');
 }
 
-export async function savePlantCareSchedulesBulk(payload: BulkPlantCareSchedulePayload) {
-  return request<{ updated: number }>('/api/plant-care-schedules/bulk', {
+export async function getPlantCareSchedules() {
+  return request<PlantCareScheduleRule[]>('/api/plant-care-schedules');
+}
+
+export async function createPlantCareSchedule(payload: BulkPlantCareSchedulePayload) {
+  return request<PlantCareScheduleRule>('/api/plant-care-schedules', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
 }
 
-export async function removePlantCareSchedulesBulk(payload: BulkPlantCareSchedulePayload) {
-  return request<{ removed: number }>('/api/plant-care-schedules/bulk-remove', {
-    method: 'POST',
+export async function updatePlantCareSchedule(id: number, payload: BulkPlantCareSchedulePayload) {
+  return request<PlantCareScheduleRule>(`/api/plant-care-schedules/${id}`, {
+    method: 'PUT',
     body: JSON.stringify(payload),
+  });
+}
+
+export async function deletePlantCareSchedule(id: number) {
+  return request<void>(`/api/plant-care-schedules/${id}`, {
+    method: 'DELETE',
   });
 }
 
 export async function completeCareTasksBulk(payload: BulkCompleteCareTasksPayload) {
   return request<{ completed: number }>('/api/care-tasks/complete-bulk', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function dismissCareTasksBulk(payload: DismissCareTasksPayload) {
+  return request<{ dismissed: number }>('/api/care-tasks/dismiss-bulk', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function createActionLogsBulk(payload: BulkCompleteCareTasksPayload) {
+  return request<{ completed: number }>('/api/action-logs/bulk', {
     method: 'POST',
     body: JSON.stringify(payload),
   });

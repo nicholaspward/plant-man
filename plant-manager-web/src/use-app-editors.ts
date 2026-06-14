@@ -4,7 +4,7 @@ import type {
   CareActivity,
   CareAction,
   Plant,
-  PlantInfoSearchResult,
+  PlantCareScheduleRule,
   PlantFlagDefinition,
   PlantGroup,
   PlantLocation,
@@ -22,17 +22,15 @@ import {
   emptyPlantFlagForm,
   emptyRecipeForm,
   emptyResourceForm,
-  emptyTaxonForm,
   toActionForm,
   toActivityForm,
+  toBulkScheduleForm,
   toFlagDefinitionForm,
   toLocationForm,
   toPlantForm,
   toPlantGroupForm,
   toRecipeForm,
   toResourceForm,
-  toTaxonForm,
-  toTaxonFormFromPlantInfo,
   type ActionFormState,
   type ActivityFormState,
   type BulkScheduleFormState,
@@ -43,7 +41,6 @@ import {
   type PlantFlagFormState,
   type RecipeFormState,
   type ResourceFormState,
-  type TaxonFormState,
   type View,
 } from './form-state';
 
@@ -61,7 +58,6 @@ type AppEditorData = {
 
 export function useAppEditors(data: AppEditorData, setView: (view: View) => void) {
   const [editingPlantId, setEditingPlantId] = useState<number | null>(null);
-  const [editingTaxonId, setEditingTaxonId] = useState<number | null>(null);
   const [editingLocationId, setEditingLocationId] = useState<number | null>(null);
   const [editingPlantGroupId, setEditingPlantGroupId] = useState<number | null>(null);
   const [editingActionId, setEditingActionId] = useState<number | null>(null);
@@ -69,8 +65,8 @@ export function useAppEditors(data: AppEditorData, setView: (view: View) => void
   const [editingRecipeId, setEditingRecipeId] = useState<number | null>(null);
   const [editingActivityId, setEditingActivityId] = useState<number | null>(null);
   const [editingFlagDefinitionId, setEditingFlagDefinitionId] = useState<number | null>(null);
+  const [editingScheduleId, setEditingScheduleId] = useState<number | null>(null);
   const [isPlantEditorOpen, setIsPlantEditorOpen] = useState(false);
-  const [isTaxonEditorOpen, setIsTaxonEditorOpen] = useState(false);
   const [isLocationEditorOpen, setIsLocationEditorOpen] = useState(false);
   const [isPlantGroupEditorOpen, setIsPlantGroupEditorOpen] = useState(false);
   const [isActionEditorOpen, setIsActionEditorOpen] = useState(false);
@@ -87,7 +83,6 @@ export function useAppEditors(data: AppEditorData, setView: (view: View) => void
   const [selectedActivityId, setSelectedActivityId] = useState<number | null>(null);
   const [selectedFlagDefinitionId, setSelectedFlagDefinitionId] = useState<number | null>(null);
   const [form, setForm] = useState<PlantFormState>(emptyPlantForm);
-  const [taxonForm, setTaxonForm] = useState<TaxonFormState>(emptyTaxonForm);
   const [locationForm, setLocationForm] = useState<LocationFormState>(emptyLocationForm);
   const [plantGroupForm, setPlantGroupForm] = useState<PlantGroupFormState>(emptyPlantGroupForm);
   const [actionForm, setActionForm] = useState<ActionFormState>(emptyActionForm);
@@ -100,7 +95,6 @@ export function useAppEditors(data: AppEditorData, setView: (view: View) => void
 
   const activePlant = data.plants.find((plant) => plant.id === editingPlantId);
   const selectedPlant = data.plants.find((plant) => plant.id === selectedPlantId);
-  const activeTaxon = data.plantTaxa.find((taxon) => taxon.id === editingTaxonId);
   const selectedTaxon = data.plantTaxa.find((taxon) => taxon.id === selectedTaxonId);
   const activeLocation = data.plantLocations.find((location) => location.id === editingLocationId);
   const selectedLocation = data.plantLocations.find((location) => location.id === selectedLocationId);
@@ -118,10 +112,6 @@ export function useAppEditors(data: AppEditorData, setView: (view: View) => void
 
   function updateForm(field: keyof PlantFormState, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
-  }
-
-  function updateTaxonForm(field: keyof TaxonFormState, value: string) {
-    setTaxonForm((current) => ({ ...current, [field]: value }));
   }
 
   function updateLocationForm(field: keyof LocationFormState, value: string) {
@@ -163,6 +153,23 @@ export function useAppEditors(data: AppEditorData, setView: (view: View) => void
     setBulkScheduleForm((current) => ({ ...current, [field]: value }));
   }
 
+  function startNewSchedule() {
+    setEditingScheduleId(null);
+    setBulkScheduleForm(emptyBulkScheduleForm);
+    setView('schedules');
+  }
+
+  function startEditingSchedule(schedule: PlantCareScheduleRule) {
+    setEditingScheduleId(schedule.id);
+    setBulkScheduleForm(toBulkScheduleForm(schedule));
+    setView('schedules');
+  }
+
+  function cancelEditingSchedule() {
+    setEditingScheduleId(null);
+    setBulkScheduleForm(emptyBulkScheduleForm);
+  }
+
   function startAddingPlant() {
     setEditingPlantId(null);
     setSelectedPlantId(null);
@@ -193,36 +200,6 @@ export function useAppEditors(data: AppEditorData, setView: (view: View) => void
     setForm(emptyPlantForm);
     setIsPlantEditorOpen(false);
     setPlantFlagForm(emptyPlantFlagForm);
-  }
-
-  function startAddingTaxon() {
-    setEditingTaxonId(null);
-    setSelectedTaxonId(null);
-    setTaxonForm(emptyTaxonForm);
-    setIsTaxonEditorOpen(true);
-    setView('taxa');
-  }
-
-  function startEditingTaxon(taxon: PlantTaxon) {
-    setSelectedTaxonId(null);
-    setEditingTaxonId(taxon.id);
-    setTaxonForm(toTaxonForm(taxon));
-    setIsTaxonEditorOpen(true);
-    setView('taxa');
-  }
-
-  function startAddingTaxonFromPlantInfo(result: PlantInfoSearchResult) {
-    setEditingTaxonId(null);
-    setSelectedTaxonId(null);
-    setTaxonForm(toTaxonFormFromPlantInfo(result));
-    setIsTaxonEditorOpen(true);
-    setView('taxa');
-  }
-
-  function cancelEditingTaxon() {
-    setEditingTaxonId(null);
-    setTaxonForm(emptyTaxonForm);
-    setIsTaxonEditorOpen(false);
   }
 
   function startAddingLocation() {
@@ -406,9 +383,9 @@ export function useAppEditors(data: AppEditorData, setView: (view: View) => void
     activePlantGroup,
     activeRecipe,
     activeResource,
-    activeTaxon,
     activityForm,
     bulkScheduleForm,
+    cancelEditingSchedule,
     cancelEditing,
     cancelEditingAction,
     cancelEditingActivity,
@@ -417,7 +394,6 @@ export function useAppEditors(data: AppEditorData, setView: (view: View) => void
     cancelEditingPlantGroup,
     cancelEditingRecipe,
     cancelEditingResource,
-    cancelEditingTaxon,
     editingActionId,
     editingActivityId,
     editingFlagDefinitionId,
@@ -426,7 +402,7 @@ export function useAppEditors(data: AppEditorData, setView: (view: View) => void
     editingPlantId,
     editingRecipeId,
     editingResourceId,
-    editingTaxonId,
+    editingScheduleId,
     flagDefinitionForm,
     form,
     isActionEditorOpen,
@@ -437,7 +413,6 @@ export function useAppEditors(data: AppEditorData, setView: (view: View) => void
     isPlantGroupEditorOpen,
     isRecipeEditorOpen,
     isResourceEditorOpen,
-    isTaxonEditorOpen,
     locationForm,
     openPlantDetail,
     plantFlagForm,
@@ -464,7 +439,7 @@ export function useAppEditors(data: AppEditorData, setView: (view: View) => void
     setEditingPlantId,
     setEditingRecipeId,
     setEditingResourceId,
-    setEditingTaxonId,
+    setEditingScheduleId,
     setPlantFlagForm,
     setSelectedActionId,
     setSelectedActivityId,
@@ -482,8 +457,6 @@ export function useAppEditors(data: AppEditorData, setView: (view: View) => void
     startAddingPlantGroup,
     startAddingRecipe,
     startAddingResource,
-    startAddingTaxon,
-    startAddingTaxonFromPlantInfo,
     startEditingAction,
     startEditingActivity,
     startEditingFlagDefinition,
@@ -492,8 +465,8 @@ export function useAppEditors(data: AppEditorData, setView: (view: View) => void
     startEditingPlantGroup,
     startEditingRecipe,
     startEditingResource,
-    startEditingTaxon,
-    taxonForm,
+    startEditingSchedule,
+    startNewSchedule,
     updateActionForm,
     updateActivityForm,
     updateBulkScheduleForm,
@@ -504,6 +477,5 @@ export function useAppEditors(data: AppEditorData, setView: (view: View) => void
     updatePlantGroupForm,
     updateRecipeForm,
     updateResourceForm,
-    updateTaxonForm,
   };
 }

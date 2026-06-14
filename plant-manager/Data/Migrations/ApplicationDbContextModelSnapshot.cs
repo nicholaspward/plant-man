@@ -198,6 +198,34 @@ namespace plant_manager.Data.Migrations
                     b.ToTable("CareActivityActionResources");
                 });
 
+            modelBuilder.Entity("plant_manager.Data.Models.CareDismissal", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CareActivityId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("DismissedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PlantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CareActivityId");
+
+                    b.HasIndex("PlantId", "CareActivityId", "DismissedOn");
+
+                    b.ToTable("CareDismissals");
+                });
+
             modelBuilder.Entity("plant_manager.Data.Models.Plant", b =>
                 {
                     b.Property<int>("Id")
@@ -253,9 +281,6 @@ namespace plant_manager.Data.Migrations
                     b.Property<int>("EveryDays")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("PlantId")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("RecurrenceMode")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -282,12 +307,23 @@ namespace plant_manager.Data.Migrations
 
                     b.HasIndex("CareActivityId");
 
-                    b.HasIndex("PlantId", "CareActionId");
+                    b.ToTable("PlantCareSchedules");
+                });
 
-                    b.HasIndex("PlantId", "CareActivityId")
+            modelBuilder.Entity("plant_manager.Data.Models.PlantCareScheduleAssignment", b =>
+                {
+                    b.Property<int>("PlantCareScheduleId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PlantId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("PlantCareScheduleId", "PlantId");
+
+                    b.HasIndex("PlantId", "PlantCareScheduleId")
                         .IsUnique();
 
-                    b.ToTable("PlantCareSchedules");
+                    b.ToTable("PlantCareScheduleAssignments");
                 });
 
             modelBuilder.Entity("plant_manager.Data.Models.PlantFlag", b =>
@@ -425,10 +461,12 @@ namespace plant_manager.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ExternalId")
+                        .IsRequired()
                         .HasMaxLength(80)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ExternalSource")
+                        .IsRequired()
                         .HasMaxLength(40)
                         .HasColumnType("TEXT");
 
@@ -457,7 +495,8 @@ namespace plant_manager.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ExternalSource", "ExternalId");
+                    b.HasIndex("ExternalSource", "ExternalId")
+                        .IsUnique();
 
                     b.ToTable("PlantTaxa");
                 });
@@ -613,6 +652,25 @@ namespace plant_manager.Data.Migrations
                     b.Navigation("CareActivityAction");
                 });
 
+            modelBuilder.Entity("plant_manager.Data.Models.CareDismissal", b =>
+                {
+                    b.HasOne("plant_manager.Data.Models.CareActivity", "CareActivity")
+                        .WithMany("CareDismissals")
+                        .HasForeignKey("CareActivityId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("plant_manager.Data.Models.Plant", "Plant")
+                        .WithMany("CareDismissals")
+                        .HasForeignKey("PlantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CareActivity");
+
+                    b.Navigation("Plant");
+                });
+
             modelBuilder.Entity("plant_manager.Data.Models.Plant", b =>
                 {
                     b.HasOne("plant_manager.Data.Models.PlantLocation", "Location")
@@ -644,17 +702,28 @@ namespace plant_manager.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("CareAction");
+
+                    b.Navigation("CareActivity");
+                });
+
+            modelBuilder.Entity("plant_manager.Data.Models.PlantCareScheduleAssignment", b =>
+                {
+                    b.HasOne("plant_manager.Data.Models.PlantCareSchedule", "PlantCareSchedule")
+                        .WithMany("Assignments")
+                        .HasForeignKey("PlantCareScheduleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("plant_manager.Data.Models.Plant", "Plant")
-                        .WithMany("CareSchedules")
+                        .WithMany("CareScheduleAssignments")
                         .HasForeignKey("PlantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("CareAction");
-
-                    b.Navigation("CareActivity");
-
                     b.Navigation("Plant");
+
+                    b.Navigation("PlantCareSchedule");
                 });
 
             modelBuilder.Entity("plant_manager.Data.Models.PlantFlag", b =>
@@ -755,6 +824,8 @@ namespace plant_manager.Data.Migrations
 
                     b.Navigation("Actions");
 
+                    b.Navigation("CareDismissals");
+
                     b.Navigation("PlantCareSchedules");
                 });
 
@@ -767,11 +838,18 @@ namespace plant_manager.Data.Migrations
                 {
                     b.Navigation("ActionLogs");
 
-                    b.Navigation("CareSchedules");
+                    b.Navigation("CareDismissals");
+
+                    b.Navigation("CareScheduleAssignments");
 
                     b.Navigation("Flags");
 
                     b.Navigation("GroupMemberships");
+                });
+
+            modelBuilder.Entity("plant_manager.Data.Models.PlantCareSchedule", b =>
+                {
+                    b.Navigation("Assignments");
                 });
 
             modelBuilder.Entity("plant_manager.Data.Models.PlantFlagDefinition", b =>

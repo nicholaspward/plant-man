@@ -7,6 +7,9 @@
 .env
 .codex/
 data/
+plant-manager/App_Data/
+core.*
+**/core.*
 
 # User-specific files
 *.rsuser

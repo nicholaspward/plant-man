@@ -13,7 +13,7 @@ namespace plant_manager.Data.Models
         public string? Authority { get; set; }
         public string? Family { get; set; }
         public string? CommonName { get; set; }
-        public string? ExternalSource { get; set; }
-        public string? ExternalId { get; set; }
+        public string ExternalSource { get; set; } = string.Empty;
+        public string ExternalId { get; set; } = string.Empty;
     }
 }

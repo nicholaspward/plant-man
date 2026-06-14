@@ -5,6 +5,7 @@ import {
   getCareActions,
   getCareTasks,
   getPlants,
+  getPlantCareSchedules,
   getPlantFlags,
   getPlantGroups,
   getPlantLocations,
@@ -17,6 +18,7 @@ import type {
   CareAction,
   CareTask,
   Plant,
+  PlantCareScheduleRule,
   PlantFlagDefinition,
   PlantGroup,
   PlantLocation,
@@ -33,6 +35,7 @@ export function useDashboardData() {
   const [actionResources, setActionResources] = useState<ActionResource[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [careActivities, setCareActivities] = useState<CareActivity[]>([]);
+  const [plantCareSchedules, setPlantCareSchedules] = useState<PlantCareScheduleRule[]>([]);
   const [plantFlagDefinitions, setPlantFlagDefinitions] = useState<PlantFlagDefinition[]>([]);
   const [careTasks, setCareTasks] = useState<CareTask[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,6 +46,7 @@ export function useDashboardData() {
       const [
         plantsResponse,
         tasksResponse,
+        schedulesResponse,
         taxaResponse,
         locationsResponse,
         groupsResponse,
@@ -54,6 +58,7 @@ export function useDashboardData() {
       ] = await Promise.all([
         getPlants(),
         getCareTasks(),
+        getPlantCareSchedules(),
         getPlantTaxa(),
         getPlantLocations(),
         getPlantGroups(),
@@ -67,6 +72,7 @@ export function useDashboardData() {
       setError(null);
       setPlants(plantsResponse);
       setCareTasks(tasksResponse);
+      setPlantCareSchedules(schedulesResponse);
       setPlantTaxa(taxaResponse);
       setPlantLocations(locationsResponse);
       setPlantGroups(groupsResponse);
@@ -108,14 +114,16 @@ export function useDashboardData() {
   }
 
   async function loadPlantsAndCareTasks() {
-    const [plantsResponse, tasksResponse] = await Promise.all([
+    const [plantsResponse, tasksResponse, schedulesResponse] = await Promise.all([
       getPlants(),
       getCareTasks(),
+      getPlantCareSchedules(),
     ]);
 
     setError(null);
     setPlants(plantsResponse);
     setCareTasks(tasksResponse);
+    setPlantCareSchedules(schedulesResponse);
   }
 
   async function loadTaxaAndPlants() {
@@ -144,6 +152,7 @@ export function useDashboardData() {
     const [
       plantsResponse,
       tasksResponse,
+      schedulesResponse,
       actionsResponse,
       resourcesResponse,
       recipesResponse,
@@ -151,6 +160,7 @@ export function useDashboardData() {
     ] = await Promise.all([
       getPlants(),
       getCareTasks(),
+      getPlantCareSchedules(),
       getCareActions(),
       getActionResources(),
       getRecipes(),
@@ -160,6 +170,7 @@ export function useDashboardData() {
     setError(null);
     setPlants(plantsResponse);
     setCareTasks(tasksResponse);
+    setPlantCareSchedules(schedulesResponse);
     setCareActions(actionsResponse);
     setActionResources(resourcesResponse);
     setRecipes(recipesResponse);
@@ -206,6 +217,7 @@ export function useDashboardData() {
     loadRecipesAndResources,
     loadTaxaAndPlants,
     plantFlagDefinitions,
+    plantCareSchedules,
     plantGroups,
     plantLocations,
     plantTaxa,

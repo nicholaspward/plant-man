@@ -9,7 +9,7 @@ import type {
   Recipe,
   RecipePayload,
   Plant,
-  PlantInfoSearchResult,
+  PlantCareScheduleRule,
   AssignPlantFlagPayload,
   PlantPayload,
   PlantFlagDefinition,
@@ -23,7 +23,6 @@ import type {
   ScheduleRecurrenceMode,
   ScheduleRepeatUnit,
   PlantTaxon,
-  PlantTaxonPayload,
 } from './domain';
 
 export const emptyPlantForm = {
@@ -31,19 +30,6 @@ export const emptyPlantForm = {
   birthday: '',
   taxonId: '',
   locationId: '',
-};
-
-export const emptyTaxonForm = {
-  name: '',
-  genus: '',
-  species: '',
-  cultivar: '',
-  variety: '',
-  authority: '',
-  family: '',
-  commonName: '',
-  externalSource: '',
-  externalId: '',
 };
 
 export const emptyLocationForm = {
@@ -119,14 +105,13 @@ export const emptyBulkScheduleForm = {
   repeatEvery: '1',
   repeatUnit: 'week',
   repeatOnDays: [] as string[],
-  endsMode: 'after',
+  endsMode: 'never',
   endsOn: '',
   endsAfterOccurrences: '12',
   plantIds: [] as string[],
 };
 
 export type PlantFormState = typeof emptyPlantForm;
-export type TaxonFormState = typeof emptyTaxonForm;
 export type LocationFormState = typeof emptyLocationForm;
 export type PlantGroupFormState = typeof emptyPlantGroupForm;
 export type ActionFormState = typeof emptyActionForm;
@@ -136,7 +121,7 @@ export type RecipeFormState = typeof emptyRecipeForm;
 export type FlagDefinitionFormState = typeof emptyFlagDefinitionForm;
 export type PlantFlagFormState = typeof emptyPlantFlagForm;
 export type BulkScheduleFormState = typeof emptyBulkScheduleForm;
-export type View = 'home' | 'plant-management' | 'schedules' | 'taxa' | 'locations' | 'groups' | 'actions' | 'resources' | 'recipes' | 'activities' | 'flags' | 'import-export';
+export type View = 'home' | 'plant-management' | 'care' | 'schedules' | 'taxa' | 'locations' | 'groups' | 'actions' | 'resources' | 'recipes' | 'activities' | 'flags' | 'import-export';
 
 export function toPlantForm(plant: Plant): PlantFormState {
   return {
@@ -184,51 +169,6 @@ export function toPlantGroupPayload(form: PlantGroupFormState): PlantGroupPayloa
     name: form.name.trim(),
     plantIds: form.plantIds.map((id) => Number(id)),
     notes: form.notes.trim() || null,
-  };
-}
-
-export function toTaxonForm(taxon: PlantTaxon): TaxonFormState {
-  return {
-    name: taxon.name,
-    genus: taxon.genus,
-    species: taxon.species,
-    cultivar: taxon.cultivar ?? '',
-    variety: taxon.variety ?? '',
-    authority: taxon.authority ?? '',
-    family: taxon.family ?? '',
-    commonName: taxon.commonName ?? '',
-    externalSource: taxon.externalSource ?? '',
-    externalId: taxon.externalId ?? '',
-  };
-}
-
-export function toTaxonFormFromPlantInfo(result: PlantInfoSearchResult): TaxonFormState {
-  const canonicalName = result.canonicalName ?? result.scientificName;
-
-  return {
-    ...emptyTaxonForm,
-    name: result.commonName ?? canonicalName,
-    genus: result.genus ?? '',
-    species: result.species ?? canonicalName.split(' ')[1] ?? '',
-    family: result.family ?? '',
-    commonName: result.commonName ?? '',
-    externalSource: result.source,
-    externalId: result.externalId,
-  };
-}
-
-export function toTaxonPayload(form: TaxonFormState): PlantTaxonPayload {
-  return {
-    name: form.name.trim(),
-    genus: form.genus.trim(),
-    species: form.species.trim(),
-    cultivar: form.cultivar.trim() || null,
-    variety: form.variety.trim() || null,
-    authority: form.authority.trim() || null,
-    family: form.family.trim() || null,
-    commonName: form.commonName.trim() || null,
-    externalSource: form.externalSource.trim() || null,
-    externalId: form.externalId.trim() || null,
   };
 }
 
@@ -361,6 +301,22 @@ export function toBulkSchedulePayload(form: BulkScheduleFormState): BulkPlantCar
       : form.endsMode === 'after'
         ? Number(form.endsAfterOccurrences)
         : null,
+  };
+}
+
+export function toBulkScheduleForm(schedule: PlantCareScheduleRule): BulkScheduleFormState {
+  return {
+    careActivityId: String(schedule.careActivityId),
+    everyDays: String(schedule.everyDays),
+    scheduledFor: schedule.scheduledFor ?? '',
+    recurrenceMode: schedule.recurrenceMode,
+    repeatEvery: String(schedule.repeatEvery),
+    repeatUnit: schedule.repeatUnit,
+    repeatOnDays: schedule.repeatOnDays ? schedule.repeatOnDays.split(',').filter(Boolean) : [],
+    endsMode: schedule.endsMode,
+    endsOn: schedule.endsOn ?? '',
+    endsAfterOccurrences: schedule.endsAfterOccurrences === null ? '12' : String(schedule.endsAfterOccurrences),
+    plantIds: schedule.plants.map((plant) => String(plant.id)),
   };
 }
 

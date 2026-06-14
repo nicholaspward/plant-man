@@ -36,9 +36,31 @@ export type PlantCareSchedule = {
   status: CareStatus;
 };
 
+export type PlantCareScheduleAssignment = {
+  id: number;
+  nickname: string;
+};
+
+export type PlantCareScheduleRule = {
+  id: number;
+  careActivityId: number;
+  careActionId: number;
+  action: string;
+  everyDays: number;
+  scheduledFor: string | null;
+  recurrenceMode: ScheduleRecurrenceMode;
+  repeatEvery: number;
+  repeatUnit: ScheduleRepeatUnit;
+  repeatOnDays: string | null;
+  endsMode: ScheduleEndsMode;
+  endsOn: string | null;
+  endsAfterOccurrences: number | null;
+  plants: PlantCareScheduleAssignment[];
+};
+
 export type ScheduleRecurrenceMode = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
 export type ScheduleRepeatUnit = 'day' | 'week' | 'month' | 'year';
-export type ScheduleEndsMode = 'on' | 'after';
+export type ScheduleEndsMode = 'never' | 'on' | 'after';
 export type RecipeMeasurementMode = 'quantity' | 'total_percent' | 'bakers_percent';
 
 export type PlantTaxon = {
@@ -183,6 +205,24 @@ export type CareActivityActionResource = {
   quantity: number | null;
   unit: string | null;
   notes: string | null;
+  producedByRecipe: CareActivityRecipe | null;
+};
+
+export type CareActivityRecipe = {
+  id: number;
+  name: string;
+  measurementMode: RecipeMeasurementMode;
+  components: CareActivityRecipeComponent[];
+  notes: string | null;
+};
+
+export type CareActivityRecipeComponent = {
+  actionResourceId: number;
+  name: string;
+  quantity: number | null;
+  unit: string | null;
+  notes: string | null;
+  sortOrder: number;
 };
 
 export type PlantFlagDefinition = {
@@ -253,19 +293,6 @@ export type BulkPlantCareSchedulePayload = {
   endsMode: ScheduleEndsMode;
   endsOn: string | null;
   endsAfterOccurrences: number | null;
-};
-
-export type PlantTaxonPayload = {
-  name: string;
-  genus: string;
-  species: string;
-  cultivar: string | null;
-  variety: string | null;
-  authority: string | null;
-  family: string | null;
-  commonName: string | null;
-  externalSource: string | null;
-  externalId: string | null;
 };
 
 export type PlantLocationPayload = {
@@ -339,6 +366,13 @@ export type BulkCompleteCareTasksPayload = {
   notes: string | null;
   performedOn: string | null;
   resources: CareLogResourcePayload[];
+};
+
+export type DismissCareTasksPayload = {
+  careActivityId: number;
+  plantIds: number[];
+  notes: string | null;
+  dismissedOn: string | null;
 };
 
 export type CareLogResourcePayload = {
