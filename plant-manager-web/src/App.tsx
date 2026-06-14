@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ActionsView } from './components/ActionsView';
 import { ActivitiesView } from './components/ActivitiesView';
 import { CareView } from './components/CareView';
+import { CareHistoryView } from './components/CareHistoryView';
 import { FlagsView } from './components/FlagsView';
 import { GroupsView } from './components/GroupsView';
 import { HomeView } from './components/HomeView';
@@ -23,6 +24,7 @@ export function App() {
     actionResources,
     careActions,
     careActivities,
+    careHistory,
     careTasks,
     dueCount,
     error,
@@ -159,6 +161,7 @@ export function App() {
     removeAction,
     removeActivity,
     removeAssignedPlantFlag,
+    removeCareHistoryEvent,
     removeSchedule,
     removeFlagDefinition,
     removeLocation,
@@ -180,6 +183,8 @@ export function App() {
     searchTaxonInfo,
     previewCatalogImportFile,
     setPlantInfoQuery,
+    snoozeCare,
+    updateCareHistoryEvent,
   } = useAppActions({
     editors,
     loadDashboard,
@@ -243,6 +248,13 @@ export function App() {
                 onClick={() => setView('care')}
               >
                 Care
+              </button>
+              <button
+                type="button"
+                aria-current={view === 'care-history' ? 'page' : undefined}
+                onClick={() => setView('care-history')}
+              >
+                Care History
               </button>
               <button
                 type="button"
@@ -393,6 +405,18 @@ export function App() {
                 plants={plants}
                 onDismissCare={(payload) => void dismissCare(payload)}
                 onLogCare={(payload, requireDueSchedule) => void logCare(payload, requireDueSchedule)}
+                onSnoozeCare={(payload) => void snoozeCare(payload)}
+              />
+            ) : view === 'care-history' ? (
+              <CareHistoryView
+                activities={careActivities}
+                events={careHistory}
+                error={error}
+                isLoading={isLoading}
+                isSaving={isSaving}
+                plants={plants}
+                onDelete={(event) => void removeCareHistoryEvent(event)}
+                onUpdate={(event, payload) => void updateCareHistoryEvent(event, payload)}
               />
             ) : view === 'taxa' ? (
               <TaxaView

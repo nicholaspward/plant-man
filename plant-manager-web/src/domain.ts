@@ -260,6 +260,18 @@ export type ActionLogResource = {
   unit: string | null;
 };
 
+export type CareHistoryEvent = {
+  id: number;
+  type: 'log' | 'dismissal' | 'snooze';
+  plantId: number;
+  plantName: string;
+  careActivityId: number;
+  action: string;
+  date: string;
+  notes: string | null;
+  resources: ActionLogResource[];
+};
+
 export type PlantPayload = {
   nickname: string;
   birthday: string | null;
@@ -375,10 +387,39 @@ export type DismissCareTasksPayload = {
   dismissedOn: string | null;
 };
 
+export type SnoozeCareTasksPayload = {
+  careActivityId: number;
+  plantIds: number[];
+  notes: string | null;
+  snoozedUntil: string;
+};
+
 export type CareLogResourcePayload = {
   actionResourceId: number;
   quantity: number | null;
   unit: string | null;
+};
+
+export type UpdateActionLogPayload = {
+  plantId: number;
+  careActivityId: number;
+  notes: string | null;
+  performedOn: string;
+  resources: CareLogResourcePayload[];
+};
+
+export type UpdateCareDismissalPayload = {
+  plantId: number;
+  careActivityId: number;
+  notes: string | null;
+  dismissedOn: string;
+};
+
+export type UpdateCareSnoozePayload = {
+  plantId: number;
+  careActivityId: number;
+  notes: string | null;
+  snoozedUntil: string;
 };
 
 export type CareTask = {

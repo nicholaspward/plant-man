@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { BulkCompleteCareTasksPayload, CareActivity, CareActivityActionResource, CareActivityRecipeComponent, CareTask, DismissCareTasksPayload, Plant } from '../domain';
+import type { BulkCompleteCareTasksPayload, CareActivity, CareActivityActionResource, CareActivityRecipeComponent, CareTask, DismissCareTasksPayload, Plant, SnoozeCareTasksPayload } from '../domain';
 import { SummaryStrip } from './Ui';
 
 type CareMode = 'due' | 'upcoming' | 'adHoc';
@@ -13,6 +13,7 @@ type CareViewProps = {
   plants: Plant[];
   onDismissCare: (payload: DismissCareTasksPayload) => void;
   onLogCare: (payload: BulkCompleteCareTasksPayload, requireDueSchedule: boolean) => void;
+  onSnoozeCare: (payload: SnoozeCareTasksPayload) => void;
 };
 
 const modeOptions: { value: CareMode; label: string }[] = [
@@ -30,12 +31,14 @@ export function CareView({
   plants,
   onDismissCare,
   onLogCare,
+  onSnoozeCare,
 }: CareViewProps) {
   const [mode, setMode] = useState<CareMode>('due');
   const [activityId, setActivityId] = useState('');
   const [selectedPlantIds, setSelectedPlantIds] = useState<string[]>([]);
   const [plantQuery, setPlantQuery] = useState('');
   const [performedOn, setPerformedOn] = useState(() => new Date().toISOString().slice(0, 10));
+  const [snoozedUntil, setSnoozedUntil] = useState(() => getTomorrowInputDate());
   const [notes, setNotes] = useState('');
   const [resourceEdits, setResourceEdits] = useState<Record<number, { quantity: string; unit: string }>>({});
 
@@ -111,6 +114,22 @@ export function CareView({
     setNotes('');
   }
 
+  function snooze() {
+    if (!selectedActivity) {
+      return;
+    }
+
+    onSnoozeCare({
+      careActivityId: selectedActivity.id,
+      plantIds: selectedPlantIds.map((id) => Number(id)),
+      snoozedUntil,
+      notes: notes.trim() || null,
+    });
+
+    setSelectedPlantIds([]);
+    setNotes('');
+  }
+
   return (
     <>
       <SummaryStrip ariaLabel="Care summary">
@@ -167,6 +186,17 @@ export function CareView({
               onChange={(event) => setPerformedOn(event.target.value)}
             />
           </label>
+          {mode === 'due' ? (
+            <label>
+              Snooze until
+              <input
+                disabled={isSaving}
+                type="date"
+                value={snoozedUntil}
+                onChange={(event) => setSnoozedUntil(event.target.value)}
+              />
+            </label>
+          ) : null}
           <label>
             Search plants
             <input
@@ -309,14 +339,24 @@ export function CareView({
             {isSaving ? 'Saving' : 'Log'}
           </button>
           {mode === 'due' ? (
-            <button
-              className="text-button"
-              type="button"
-              disabled={isSaving || !selectedActivity || selectedPlantIds.length === 0}
-              onClick={dismiss}
-            >
-              Dismiss
-            </button>
+            <>
+              <button
+                className="text-button"
+                type="button"
+                disabled={isSaving || !selectedActivity || selectedPlantIds.length === 0}
+                onClick={snooze}
+              >
+                Snooze
+              </button>
+              <button
+                className="text-button"
+                type="button"
+                disabled={isSaving || !selectedActivity || selectedPlantIds.length === 0}
+                onClick={dismiss}
+              >
+                Dismiss
+              </button>
+            </>
           ) : null}
         </div>
       </section>
@@ -373,4 +413,10 @@ function formatRecipeComponent(component: CareActivityRecipeComponent) {
 
 function formatNumber(value: number | null) {
   return value === null ? '' : String(value);
+}
+
+function getTomorrowInputDate() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow.toISOString().slice(0, 10);
 }

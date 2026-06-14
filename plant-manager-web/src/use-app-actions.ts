@@ -13,9 +13,12 @@ import {
   createPlantGroup,
   createPlantLocation,
   createRecipe,
+  deleteActionLog,
   deleteActionResource,
   deleteCareAction,
   deleteCareActivity,
+  deleteCareDismissal,
+  deleteCareSnooze,
   deletePlant,
   deletePlantCareSchedule,
   deletePlantFlag,
@@ -30,9 +33,13 @@ import {
   removePlantFlagAssignment,
   resolvePlantFlag,
   searchPlantInfo,
+  snoozeCareTasksBulk,
+  updateActionLog,
   updateActionResource,
   updateCareAction,
   updateCareActivity,
+  updateCareDismissal,
+  updateCareSnooze,
   updatePlant,
   updatePlantCareSchedule,
   updatePlantFlag,
@@ -40,7 +47,7 @@ import {
   updatePlantLocation,
   updateRecipe,
 } from './api';
-import type { BulkCompleteCareTasksPayload, CareTask, CatalogImportResult, DismissCareTasksPayload, Plant, PlantCareScheduleRule, PlantFlag, PlantInfoSearchResult, PlantTaxon } from './domain';
+import type { BulkCompleteCareTasksPayload, CareHistoryEvent, CareTask, CatalogImportResult, DismissCareTasksPayload, Plant, PlantCareScheduleRule, PlantFlag, PlantInfoSearchResult, PlantTaxon, SnoozeCareTasksPayload, UpdateActionLogPayload, UpdateCareDismissalPayload, UpdateCareSnoozePayload } from './domain';
 import {
   emptyPlantFlagForm,
   toActionPayload,
@@ -787,6 +794,64 @@ export function useAppActions({
     }
   }
 
+  async function snoozeCare(payload: SnoozeCareTasksPayload) {
+    if (payload.plantIds.length === 0 || !payload.careActivityId || !payload.snoozedUntil) {
+      setError('Select an activity, at least one plant, and a snooze date.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await snoozeCareTasksBulk(payload);
+      await loadPlantsAndCareTasks();
+    } catch {
+      setError('Could not snooze care.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function updateCareHistoryEvent(event: CareHistoryEvent, payload: UpdateActionLogPayload | UpdateCareDismissalPayload | UpdateCareSnoozePayload) {
+    setIsSaving(true);
+    try {
+      if (event.type === 'log') {
+        await updateActionLog(event.id, payload as UpdateActionLogPayload);
+      } else if (event.type === 'dismissal') {
+        await updateCareDismissal(event.id, payload as UpdateCareDismissalPayload);
+      } else {
+        await updateCareSnooze(event.id, payload as UpdateCareSnoozePayload);
+      }
+      await loadPlantsAndCareTasks();
+    } catch {
+      setError('Could not update care history.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function removeCareHistoryEvent(event: CareHistoryEvent) {
+    const confirmed = window.confirm(`Delete this ${formatCareHistoryType(event.type)} event?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      if (event.type === 'log') {
+        await deleteActionLog(event.id);
+      } else if (event.type === 'dismissal') {
+        await deleteCareDismissal(event.id);
+      } else {
+        await deleteCareSnooze(event.id);
+      }
+      await loadPlantsAndCareTasks();
+    } catch {
+      setError('Could not delete care history.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return {
     assignFlagToSelectedPlant,
     applyCatalogImportFile,
@@ -801,6 +866,7 @@ export function useAppActions({
     isSearchingPlantInfo,
     isSaving,
     logCare,
+    removeCareHistoryEvent,
     importTaxonFromPlantInfo,
     plantInfoQuery,
     plantInfoResults,
@@ -828,9 +894,15 @@ export function useAppActions({
     searchTaxonInfo,
     previewCatalogImportFile,
     setPlantInfoQuery,
+    snoozeCare,
+    updateCareHistoryEvent,
   };
 }
 
 function getTodayInputDate() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function formatCareHistoryType(type: CareHistoryEvent['type']) {
+  return type === 'log' ? 'logged care' : type === 'dismissal' ? 'dismissed care' : 'snoozed care';
 }

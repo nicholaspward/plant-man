@@ -15,6 +15,8 @@ namespace plant_manager.Endpoints
                     .Include(assignment => assignment.Plant)
                     .ThenInclude(plant => plant.CareDismissals)
                     .Include(assignment => assignment.Plant)
+                    .ThenInclude(plant => plant.CareSnoozes)
+                    .Include(assignment => assignment.Plant)
                     .ThenInclude(plant => plant.ActionLogs)
                     .Include(assignment => assignment.PlantCareSchedule)
                     .ThenInclude(schedule => schedule.CareAction)
@@ -30,13 +32,14 @@ namespace plant_manager.Endpoints
                     .OrderBy(assignment => assignment.Plant.Nickname)
                     .ThenBy(assignment => assignment.PlantCareSchedule.CareActivity.Name)
                     .ToListAsync();
-                var (latestLogLookup, completedLookup) = await GetCareProgress(db);
+                var (latestLogLookup, completedLookup, snoozeLookup) = await GetCareProgress(db);
 
                 var tasks = assignments
                     .Select(assignment => CareTaskDto.FromAssignment(
                         assignment,
                         latestLogLookup.GetValueOrDefault((assignment.PlantId, assignment.PlantCareSchedule.CareActivityId)),
                         completedLookup.GetValueOrDefault((assignment.PlantId, assignment.PlantCareSchedule.CareActivityId)),
+                        snoozeLookup.GetValueOrDefault((assignment.PlantId, assignment.PlantCareSchedule.CareActivityId)),
                         today))
                     .Where(task => task.Status is "due" or "soon")
                     .ToList();
@@ -94,47 +97,15 @@ namespace plant_manager.Endpoints
                     return Results.BadRequest(new { error = "One or more plants do not have this schedule." });
                 }
 
-                var latestLogs = await db.ActionLogs
-                    .Where(log => log.CareActivityId == activity.Id && plantIds.Contains(log.PlantId))
-                    .GroupBy(log => log.PlantId)
-                    .Select(group => new
-                    {
-                        PlantId = group.Key,
-                        LastPerformedOn = group.Max(log => log.PerformedOn),
-                        CompletedOccurrences = group.Count()
-                    })
-                    .ToListAsync();
-                var latestLogLookup = latestLogs.ToDictionary(
-                    log => log.PlantId,
-                    log => (DateOnly?)log.LastPerformedOn);
-                var completedLookup = latestLogs.ToDictionary(
-                    log => log.PlantId,
-                    log => log.CompletedOccurrences);
-                var dismissals = await db.CareDismissals
-                    .Where(dismissal => dismissal.CareActivityId == activity.Id && plantIds.Contains(dismissal.PlantId))
-                    .GroupBy(dismissal => dismissal.PlantId)
-                    .Select(group => new
-                    {
-                        PlantId = group.Key,
-                        LastDismissedOn = group.Max(dismissal => dismissal.DismissedOn),
-                        DismissedOccurrences = group.Count()
-                    })
-                    .ToListAsync();
-                foreach (var dismissal in dismissals)
-                {
-                    latestLogLookup[dismissal.PlantId] = MaxDate(
-                        latestLogLookup.GetValueOrDefault(dismissal.PlantId),
-                        dismissal.LastDismissedOn);
-                    completedLookup[dismissal.PlantId] = completedLookup.GetValueOrDefault(dismissal.PlantId)
-                        + dismissal.DismissedOccurrences;
-                }
+                var (latestLogLookup, completedLookup, snoozeLookup) = await GetCareProgress(db, activity.Id, plantIds);
                 var duePlantIds = assignments
                     .Where(assignment =>
                         PlantCareFormatter.GetStatus(
                             PlantCareFormatter.GetNextCareDate(
                                 assignment.PlantCareSchedule,
-                                latestLogLookup.GetValueOrDefault(assignment.PlantId),
-                                completedLookup.GetValueOrDefault(assignment.PlantId)),
+                                latestLogLookup.GetValueOrDefault((assignment.PlantId, activity.Id)),
+                                completedLookup.GetValueOrDefault((assignment.PlantId, activity.Id)),
+                                snoozeLookup.GetValueOrDefault((assignment.PlantId, activity.Id))),
                             today) == "due")
                     .Select(assignment => assignment.PlantId)
                     .ToHashSet();
@@ -238,14 +209,15 @@ namespace plant_manager.Endpoints
                     return Results.BadRequest(new { error = "One or more plants do not have this schedule." });
                 }
 
-                var (latestLookup, completedLookup) = await GetCareProgress(db, activity.Id, plantIds);
+                var (latestLookup, completedLookup, snoozeLookup) = await GetCareProgress(db, activity.Id, plantIds);
                 var duePlantIds = assignments
                     .Where(assignment =>
                         PlantCareFormatter.GetStatus(
                             PlantCareFormatter.GetNextCareDate(
                                 assignment.PlantCareSchedule,
                                 latestLookup.GetValueOrDefault((assignment.PlantId, activity.Id)),
-                                completedLookup.GetValueOrDefault((assignment.PlantId, activity.Id))),
+                                completedLookup.GetValueOrDefault((assignment.PlantId, activity.Id)),
+                                snoozeLookup.GetValueOrDefault((assignment.PlantId, activity.Id))),
                             today) == "due")
                     .Select(assignment => assignment.PlantId)
                     .ToHashSet();
@@ -273,26 +245,107 @@ namespace plant_manager.Endpoints
 
                 return Results.Ok(new { dismissed = dismissals.Count });
             });
+
+            app.MapPost("/api/care-tasks/snooze-bulk", async (
+                SnoozeCareTasksRequest request,
+                ApplicationDbContext db) =>
+            {
+                var plantIds = request.PlantIds
+                    .Where(id => id > 0)
+                    .Distinct()
+                    .ToList();
+                if (plantIds.Count == 0)
+                {
+                    return Results.BadRequest(new { error = "At least one plant is required." });
+                }
+
+                var activity = await db.CareActivities.FindAsync(request.CareActivityId);
+                if (activity is null)
+                {
+                    return Results.BadRequest(new { error = "Care activity was not found." });
+                }
+
+                var today = DateOnly.FromDateTime(DateTime.UtcNow);
+                if (request.SnoozedUntil <= today)
+                {
+                    return Results.BadRequest(new { error = "Snooze date must be after today." });
+                }
+
+                var assignments = await db.PlantCareScheduleAssignments
+                    .Include(assignment => assignment.Plant)
+                    .Include(assignment => assignment.PlantCareSchedule)
+                    .Where(assignment =>
+                        assignment.PlantCareSchedule.CareActivityId == activity.Id
+                        && plantIds.Contains(assignment.PlantId))
+                    .ToListAsync();
+                var schedulePlantIds = assignments
+                    .Select(assignment => assignment.PlantId)
+                    .ToHashSet();
+                if (schedulePlantIds.Count != plantIds.Count)
+                {
+                    return Results.BadRequest(new { error = "One or more plants do not have this schedule." });
+                }
+
+                var (latestLookup, completedLookup, snoozeLookup) = await GetCareProgress(db, activity.Id, plantIds);
+                var duePlantIds = assignments
+                    .Where(assignment =>
+                        PlantCareFormatter.GetStatus(
+                            PlantCareFormatter.GetNextCareDate(
+                                assignment.PlantCareSchedule,
+                                latestLookup.GetValueOrDefault((assignment.PlantId, activity.Id)),
+                                completedLookup.GetValueOrDefault((assignment.PlantId, activity.Id)),
+                                snoozeLookup.GetValueOrDefault((assignment.PlantId, activity.Id))),
+                            today) == "due")
+                    .Select(assignment => assignment.PlantId)
+                    .ToHashSet();
+
+                if (duePlantIds.Count != plantIds.Count)
+                {
+                    return Results.BadRequest(new { error = "Only due care tasks can be snoozed." });
+                }
+
+                var notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
+                var snoozes = assignments
+                    .OrderBy(assignment => assignment.Plant.Nickname)
+                    .Select(assignment => new CareSnooze
+                    {
+                        PlantId = assignment.PlantId,
+                        CareActivityId = activity.Id,
+                        SnoozedUntil = request.SnoozedUntil,
+                        CreatedOn = today,
+                        Notes = notes
+                    })
+                    .ToList();
+
+                db.CareSnoozes.AddRange(snoozes);
+                await db.SaveChangesAsync();
+
+                return Results.Ok(new { snoozed = snoozes.Count });
+            });
         }
 
         private static async Task<(
             Dictionary<(int PlantId, int CareActivityId), DateOnly?> LatestLookup,
-            Dictionary<(int PlantId, int CareActivityId), int> CompletedLookup)> GetCareProgress(
+            Dictionary<(int PlantId, int CareActivityId), int> CompletedLookup,
+            Dictionary<(int PlantId, int CareActivityId), DateOnly?> SnoozeLookup)> GetCareProgress(
                 ApplicationDbContext db,
                 int? careActivityId = null,
                 IReadOnlyList<int>? plantIds = null)
         {
             var logsQuery = db.ActionLogs.AsQueryable();
             var dismissalsQuery = db.CareDismissals.AsQueryable();
+            var snoozesQuery = db.CareSnoozes.AsQueryable();
             if (careActivityId is not null)
             {
                 logsQuery = logsQuery.Where(log => log.CareActivityId == careActivityId);
                 dismissalsQuery = dismissalsQuery.Where(dismissal => dismissal.CareActivityId == careActivityId);
+                snoozesQuery = snoozesQuery.Where(snooze => snooze.CareActivityId == careActivityId);
             }
             if (plantIds is not null)
             {
                 logsQuery = logsQuery.Where(log => plantIds.Contains(log.PlantId));
                 dismissalsQuery = dismissalsQuery.Where(dismissal => plantIds.Contains(dismissal.PlantId));
+                snoozesQuery = snoozesQuery.Where(snooze => plantIds.Contains(snooze.PlantId));
             }
 
             var latestLogs = await logsQuery
@@ -329,7 +382,20 @@ namespace plant_manager.Endpoints
                 completedLookup[key] = completedLookup.GetValueOrDefault(key) + dismissal.DismissedOccurrences;
             }
 
-            return (latestLookup, completedLookup);
+            var latestSnoozes = await snoozesQuery
+                .GroupBy(snooze => new { snooze.PlantId, snooze.CareActivityId })
+                .Select(group => new
+                {
+                    group.Key.PlantId,
+                    group.Key.CareActivityId,
+                    SnoozedUntil = group.Max(snooze => snooze.SnoozedUntil)
+                })
+                .ToListAsync();
+            var snoozeLookup = latestSnoozes.ToDictionary(
+                snooze => (snooze.PlantId, snooze.CareActivityId),
+                snooze => (DateOnly?)snooze.SnoozedUntil);
+
+            return (latestLookup, completedLookup, snoozeLookup);
         }
 
         private static DateOnly MaxDate(DateOnly? left, DateOnly right) =>

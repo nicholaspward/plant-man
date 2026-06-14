@@ -11,7 +11,7 @@ using plant_manager.Data;
 namespace plant_manager.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260614222157_InitialCreate")]
+    [Migration("20260614225310_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -227,6 +227,37 @@ namespace plant_manager.Data.Migrations
                     b.HasIndex("PlantId", "CareActivityId", "DismissedOn");
 
                     b.ToTable("CareDismissals");
+                });
+
+            modelBuilder.Entity("plant_manager.Data.Models.CareSnooze", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CareActivityId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PlantId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("SnoozedUntil")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CareActivityId");
+
+                    b.HasIndex("PlantId", "CareActivityId", "SnoozedUntil");
+
+                    b.ToTable("CareSnoozes");
                 });
 
             modelBuilder.Entity("plant_manager.Data.Models.Plant", b =>
@@ -674,6 +705,25 @@ namespace plant_manager.Data.Migrations
                     b.Navigation("Plant");
                 });
 
+            modelBuilder.Entity("plant_manager.Data.Models.CareSnooze", b =>
+                {
+                    b.HasOne("plant_manager.Data.Models.CareActivity", "CareActivity")
+                        .WithMany("CareSnoozes")
+                        .HasForeignKey("CareActivityId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("plant_manager.Data.Models.Plant", "Plant")
+                        .WithMany("CareSnoozes")
+                        .HasForeignKey("PlantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CareActivity");
+
+                    b.Navigation("Plant");
+                });
+
             modelBuilder.Entity("plant_manager.Data.Models.Plant", b =>
                 {
                     b.HasOne("plant_manager.Data.Models.PlantLocation", "Location")
@@ -829,6 +879,8 @@ namespace plant_manager.Data.Migrations
 
                     b.Navigation("CareDismissals");
 
+                    b.Navigation("CareSnoozes");
+
                     b.Navigation("PlantCareSchedules");
                 });
 
@@ -844,6 +896,8 @@ namespace plant_manager.Data.Migrations
                     b.Navigation("CareDismissals");
 
                     b.Navigation("CareScheduleAssignments");
+
+                    b.Navigation("CareSnoozes");
 
                     b.Navigation("Flags");
 

@@ -1263,6 +1263,32 @@ dd {
   resize: vertical;
 }
 
+.care-history-row {
+  align-items: start;
+}
+
+.history-event-actions {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  justify-self: end;
+}
+
+.history-event-actions > span {
+  white-space: nowrap;
+}
+
+.care-history-editor,
+.history-resource-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.history-resource-grid .care-resource-edit {
+  grid-template-columns: minmax(100px, 1fr) minmax(80px, 120px) minmax(80px, 120px);
+}
+
 .dashboard-panel-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

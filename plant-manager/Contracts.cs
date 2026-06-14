@@ -222,6 +222,24 @@ namespace plant_manager
         DateOnly? DismissedOn,
         string? Notes);
 
+    public record SnoozeCareTasksRequest(
+        int CareActivityId,
+        IReadOnlyList<int> PlantIds,
+        DateOnly SnoozedUntil,
+        string? Notes);
+
+    public record UpdateCareDismissalRequest(
+        int PlantId,
+        int CareActivityId,
+        DateOnly DismissedOn,
+        string? Notes);
+
+    public record UpdateCareSnoozeRequest(
+        int PlantId,
+        int CareActivityId,
+        DateOnly SnoozedUntil,
+        string? Notes);
+
     public record CatalogImportIssue(
         string Sheet,
         int Row,
@@ -453,7 +471,8 @@ namespace plant_manager
                     return PlantCareFormatter.GetNextCareDate(
                         source,
                         schedule.LastPerformedOn,
-                        GetCompletedOccurrences(plant, source.CareActivityId));
+                        GetCompletedOccurrences(plant, source.CareActivityId),
+                        GetSnoozedUntil(plant, source.CareActivityId));
                 })
                 .Where(date => date is not null)
                 .OrderBy(date => date)
@@ -499,6 +518,12 @@ namespace plant_manager
         private static int GetCompletedOccurrences(Plant plant, int careActivityId) =>
             plant.ActionLogs.Count(log => log.CareActivityId == careActivityId)
             + plant.CareDismissals.Count(dismissal => dismissal.CareActivityId == careActivityId);
+
+        private static DateOnly? GetSnoozedUntil(Plant plant, int careActivityId) =>
+            plant.CareSnoozes
+                .Where(snooze => snooze.CareActivityId == careActivityId)
+                .Select(snooze => (DateOnly?)snooze.SnoozedUntil)
+                .Max();
     }
 
     public record PlantCareScheduleDto(
@@ -526,7 +551,11 @@ namespace plant_manager
             DateOnly today)
         {
             var schedule = assignment.PlantCareSchedule;
-            var nextCare = PlantCareFormatter.GetNextCareDate(schedule, lastPerformedOn, GetCompletedOccurrences(assignment));
+            var nextCare = PlantCareFormatter.GetNextCareDate(
+                schedule,
+                lastPerformedOn,
+                GetCompletedOccurrences(assignment),
+                GetSnoozedUntil(assignment));
 
             return new PlantCareScheduleDto(
                 schedule.Id,
@@ -551,6 +580,12 @@ namespace plant_manager
         private static int GetCompletedOccurrences(PlantCareScheduleAssignment assignment) =>
             assignment.Plant.ActionLogs.Count(log => log.CareActivityId == assignment.PlantCareSchedule.CareActivityId)
             + assignment.Plant.CareDismissals.Count(dismissal => dismissal.CareActivityId == assignment.PlantCareSchedule.CareActivityId);
+
+        private static DateOnly? GetSnoozedUntil(PlantCareScheduleAssignment assignment) =>
+            assignment.Plant.CareSnoozes
+                .Where(snooze => snooze.CareActivityId == assignment.PlantCareSchedule.CareActivityId)
+                .Select(snooze => (DateOnly?)snooze.SnoozedUntil)
+                .Max();
     }
 
     public record PlantCareScheduleAssignmentDto(
@@ -628,10 +663,11 @@ namespace plant_manager
             PlantCareScheduleAssignment assignment,
             DateOnly? lastPerformedOn,
             int completedOccurrences,
+            DateOnly? snoozedUntil,
             DateOnly today)
         {
             var schedule = assignment.PlantCareSchedule;
-            var nextCare = PlantCareFormatter.GetNextCareDate(schedule, lastPerformedOn, completedOccurrences);
+            var nextCare = PlantCareFormatter.GetNextCareDate(schedule, lastPerformedOn, completedOccurrences, snoozedUntil);
 
             return new CareTaskDto(
                 schedule.Id,
@@ -718,12 +754,63 @@ namespace plant_manager
                 resource.Unit);
     }
 
+    public record CareHistoryEventDto(
+        int Id,
+        string Type,
+        int PlantId,
+        string PlantName,
+        int CareActivityId,
+        string Action,
+        DateOnly Date,
+        string? Notes,
+        IReadOnlyList<ActionLogResourceDto> Resources)
+    {
+        public static CareHistoryEventDto FromActionLog(ActionLog log) =>
+            new(
+                log.Id,
+                "log",
+                log.PlantId,
+                log.Plant.Nickname,
+                log.CareActivityId,
+                log.ActionNameSnapshot,
+                log.PerformedOn,
+                log.Notes,
+                log.Resources
+                    .Select(ActionLogResourceDto.FromActionLogResource)
+                    .ToList());
+
+        public static CareHistoryEventDto FromDismissal(CareDismissal dismissal) =>
+            new(
+                dismissal.Id,
+                "dismissal",
+                dismissal.PlantId,
+                dismissal.Plant.Nickname,
+                dismissal.CareActivityId,
+                dismissal.CareActivity.Name,
+                dismissal.DismissedOn,
+                dismissal.Notes,
+                []);
+
+        public static CareHistoryEventDto FromSnooze(CareSnooze snooze) =>
+            new(
+                snooze.Id,
+                "snooze",
+                snooze.PlantId,
+                snooze.Plant.Nickname,
+                snooze.CareActivityId,
+                snooze.CareActivity.Name,
+                snooze.SnoozedUntil,
+                snooze.Notes,
+                []);
+    }
+
     internal static class PlantCareFormatter
     {
         public static DateOnly? GetNextCareDate(
             PlantCareSchedule schedule,
             DateOnly? lastPerformedOn,
-            int completedOccurrences = 0)
+            int completedOccurrences = 0,
+            DateOnly? snoozedUntil = null)
         {
             if (schedule.EndsMode == "after" && schedule.EndsAfterOccurrences is not null && completedOccurrences >= schedule.EndsAfterOccurrences)
             {
@@ -744,6 +831,11 @@ namespace plant_manager
             else
             {
                 nextCare = AddInterval(lastPerformedOn.Value, schedule);
+            }
+
+            if (nextCare is not null && snoozedUntil is not null && snoozedUntil > nextCare)
+            {
+                nextCare = snoozedUntil;
             }
 
             if (nextCare is not null && schedule.EndsMode == "on" && schedule.EndsOn is not null && nextCare > schedule.EndsOn)

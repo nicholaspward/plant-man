@@ -16,6 +16,7 @@ namespace plant_manager.Data
         public DbSet<ActionLog> ActionLogs { get; set; }
         public DbSet<ActionLogResource> ActionLogResources { get; set; }
         public DbSet<CareDismissal> CareDismissals { get; set; }
+        public DbSet<CareSnooze> CareSnoozes { get; set; }
         public DbSet<PlantCareSchedule> PlantCareSchedules { get; set; }
         public DbSet<PlantCareScheduleAssignment> PlantCareScheduleAssignments { get; set; }
         public DbSet<PlantFlagDefinition> PlantFlagDefinitions { get; set; }
@@ -180,6 +181,23 @@ namespace plant_manager.Data
                     .OnDelete(DeleteBehavior.Cascade);
                 entity.HasOne(e => e.CareActivity)
                     .WithMany(e => e.CareDismissals)
+                    .HasForeignKey(e => e.CareActivityId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<CareSnooze>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id)
+                      .ValueGeneratedOnAdd();
+                entity.Property(e => e.Notes).HasMaxLength(1000);
+                entity.HasIndex(e => new { e.PlantId, e.CareActivityId, e.SnoozedUntil });
+                entity.HasOne(e => e.Plant)
+                    .WithMany(e => e.CareSnoozes)
+                    .HasForeignKey(e => e.PlantId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.CareActivity)
+                    .WithMany(e => e.CareSnoozes)
                     .HasForeignKey(e => e.CareActivityId)
                     .OnDelete(DeleteBehavior.Restrict);
             });

@@ -7,9 +7,11 @@ import type {
   CareActionPayload,
   CatalogImportResult,
   BulkCompleteCareTasksPayload,
+  CareHistoryEvent,
   CareTask,
   BulkPlantCareSchedulePayload,
   DismissCareTasksPayload,
+  SnoozeCareTasksPayload,
   Recipe,
   RecipePayload,
   Plant,
@@ -25,6 +27,9 @@ import type {
   PlantLocation,
   PlantLocationPayload,
   PlantTaxon,
+  UpdateActionLogPayload,
+  UpdateCareDismissalPayload,
+  UpdateCareSnoozePayload,
 } from './domain';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
@@ -334,6 +339,10 @@ export async function getCareTasks() {
   return request<CareTask[]>('/api/care-tasks/upcoming');
 }
 
+export async function getCareHistory() {
+  return request<CareHistoryEvent[]>('/api/care-history');
+}
+
 export async function getPlantCareSchedules() {
   return request<PlantCareScheduleRule[]>('/api/plant-care-schedules');
 }
@@ -372,9 +381,55 @@ export async function dismissCareTasksBulk(payload: DismissCareTasksPayload) {
   });
 }
 
+export async function snoozeCareTasksBulk(payload: SnoozeCareTasksPayload) {
+  return request<{ snoozed: number }>('/api/care-tasks/snooze-bulk', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function createActionLogsBulk(payload: BulkCompleteCareTasksPayload) {
   return request<{ completed: number }>('/api/action-logs/bulk', {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+export async function updateActionLog(id: number, payload: UpdateActionLogPayload) {
+  return request<void>(`/api/action-logs/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteActionLog(id: number) {
+  return request<void>(`/api/action-logs/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function updateCareDismissal(id: number, payload: UpdateCareDismissalPayload) {
+  return request<void>(`/api/care-dismissals/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteCareDismissal(id: number) {
+  return request<void>(`/api/care-dismissals/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function updateCareSnooze(id: number, payload: UpdateCareSnoozePayload) {
+  return request<void>(`/api/care-snoozes/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteCareSnooze(id: number) {
+  return request<void>(`/api/care-snoozes/${id}`, {
+    method: 'DELETE',
   });
 }

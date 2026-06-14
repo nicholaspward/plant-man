@@ -22,6 +22,30 @@ namespace plant_manager.Endpoints
                 return Results.Ok(logs.Select(ActionLogDto.FromActionLog));
             });
 
+            app.MapGet("/api/care-history", async (ApplicationDbContext db) =>
+            {
+                var logs = await db.ActionLogs
+                    .Include(log => log.Plant)
+                    .Include(log => log.Resources)
+                    .ThenInclude(resource => resource.ActionResource)
+                    .ToListAsync();
+                var dismissals = await db.CareDismissals
+                    .Include(dismissal => dismissal.Plant)
+                    .Include(dismissal => dismissal.CareActivity)
+                    .ToListAsync();
+                var snoozes = await db.CareSnoozes
+                    .Include(snooze => snooze.Plant)
+                    .Include(snooze => snooze.CareActivity)
+                    .ToListAsync();
+
+                return Results.Ok(logs.Select(CareHistoryEventDto.FromActionLog)
+                    .Concat(dismissals.Select(CareHistoryEventDto.FromDismissal))
+                    .Concat(snoozes.Select(CareHistoryEventDto.FromSnooze))
+                    .OrderByDescending(item => item.Date)
+                    .ThenByDescending(item => item.Id)
+                    .ToList());
+            });
+
             app.MapPost("/api/action-logs", async (CreateActionLogRequest request, ApplicationDbContext db) =>
             {
                 var plant = await db.Plants.FindAsync(request.PlantId);
@@ -219,6 +243,104 @@ namespace plant_manager.Endpoints
                 }
 
                 db.ActionLogs.Remove(log);
+                await db.SaveChangesAsync();
+
+                return Results.NoContent();
+            });
+
+            app.MapPut("/api/care-dismissals/{id:int}", async (int id, UpdateCareDismissalRequest request, ApplicationDbContext db) =>
+            {
+                var dismissal = await db.CareDismissals
+                    .Include(item => item.Plant)
+                    .Include(item => item.CareActivity)
+                    .FirstOrDefaultAsync(item => item.Id == id);
+                if (dismissal is null)
+                {
+                    return Results.NotFound();
+                }
+
+                var plant = await db.Plants.FindAsync(request.PlantId);
+                if (plant is null)
+                {
+                    return Results.BadRequest(new { error = "Plant was not found." });
+                }
+
+                var activity = await db.CareActivities.FindAsync(request.CareActivityId);
+                if (activity is null)
+                {
+                    return Results.BadRequest(new { error = "Care activity was not found." });
+                }
+
+                dismissal.PlantId = plant.Id;
+                dismissal.Plant = plant;
+                dismissal.CareActivityId = activity.Id;
+                dismissal.CareActivity = activity;
+                dismissal.DismissedOn = request.DismissedOn;
+                dismissal.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
+
+                await db.SaveChangesAsync();
+
+                return Results.Ok(CareHistoryEventDto.FromDismissal(dismissal));
+            });
+
+            app.MapDelete("/api/care-dismissals/{id:int}", async (int id, ApplicationDbContext db) =>
+            {
+                var dismissal = await db.CareDismissals.FindAsync(id);
+                if (dismissal is null)
+                {
+                    return Results.NotFound();
+                }
+
+                db.CareDismissals.Remove(dismissal);
+                await db.SaveChangesAsync();
+
+                return Results.NoContent();
+            });
+
+            app.MapPut("/api/care-snoozes/{id:int}", async (int id, UpdateCareSnoozeRequest request, ApplicationDbContext db) =>
+            {
+                var snooze = await db.CareSnoozes
+                    .Include(item => item.Plant)
+                    .Include(item => item.CareActivity)
+                    .FirstOrDefaultAsync(item => item.Id == id);
+                if (snooze is null)
+                {
+                    return Results.NotFound();
+                }
+
+                var plant = await db.Plants.FindAsync(request.PlantId);
+                if (plant is null)
+                {
+                    return Results.BadRequest(new { error = "Plant was not found." });
+                }
+
+                var activity = await db.CareActivities.FindAsync(request.CareActivityId);
+                if (activity is null)
+                {
+                    return Results.BadRequest(new { error = "Care activity was not found." });
+                }
+
+                snooze.PlantId = plant.Id;
+                snooze.Plant = plant;
+                snooze.CareActivityId = activity.Id;
+                snooze.CareActivity = activity;
+                snooze.SnoozedUntil = request.SnoozedUntil;
+                snooze.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
+
+                await db.SaveChangesAsync();
+
+                return Results.Ok(CareHistoryEventDto.FromSnooze(snooze));
+            });
+
+            app.MapDelete("/api/care-snoozes/{id:int}", async (int id, ApplicationDbContext db) =>
+            {
+                var snooze = await db.CareSnoozes.FindAsync(id);
+                if (snooze is null)
+                {
+                    return Results.NotFound();
+                }
+
+                db.CareSnoozes.Remove(snooze);
                 await db.SaveChangesAsync();
 
                 return Results.NoContent();

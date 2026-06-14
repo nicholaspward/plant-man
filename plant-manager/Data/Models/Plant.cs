@@ -12,6 +12,7 @@ namespace plant_manager.Data.Models
         public PlantLocation? Location { get; set; }
         public List<ActionLog> ActionLogs { get; set; } = [];
         public List<CareDismissal> CareDismissals { get; set; } = [];
+        public List<CareSnooze> CareSnoozes { get; set; } = [];
         public List<PlantCareScheduleAssignment> CareScheduleAssignments { get; set; } = [];
         public List<PlantFlag> Flags { get; set; } = [];
         public List<PlantGroupMembership> GroupMemberships { get; set; } = [];

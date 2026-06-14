@@ -348,6 +348,35 @@ namespace plant_manager.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "CareSnoozes",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    PlantId = table.Column<int>(type: "INTEGER", nullable: false),
+                    CareActivityId = table.Column<int>(type: "INTEGER", nullable: false),
+                    SnoozedUntil = table.Column<DateOnly>(type: "TEXT", nullable: false),
+                    CreatedOn = table.Column<DateOnly>(type: "TEXT", nullable: false),
+                    Notes = table.Column<string>(type: "TEXT", maxLength: 1000, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CareSnoozes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CareSnoozes_CareActivities_CareActivityId",
+                        column: x => x.CareActivityId,
+                        principalTable: "CareActivities",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_CareSnoozes_Plants_PlantId",
+                        column: x => x.PlantId,
+                        principalTable: "Plants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PlantCareScheduleAssignments",
                 columns: table => new
                 {
@@ -515,6 +544,16 @@ namespace plant_manager.Data.Migrations
                 columns: new[] { "PlantId", "CareActivityId", "DismissedOn" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_CareSnoozes_CareActivityId",
+                table: "CareSnoozes",
+                column: "CareActivityId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CareSnoozes_PlantId_CareActivityId_SnoozedUntil",
+                table: "CareSnoozes",
+                columns: new[] { "PlantId", "CareActivityId", "SnoozedUntil" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PlantCareScheduleAssignments_PlantId_PlantCareScheduleId",
                 table: "PlantCareScheduleAssignments",
                 columns: new[] { "PlantId", "PlantCareScheduleId" },
@@ -614,6 +653,9 @@ namespace plant_manager.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "CareDismissals");
+
+            migrationBuilder.DropTable(
+                name: "CareSnoozes");
 
             migrationBuilder.DropTable(
                 name: "PlantCareScheduleAssignments");
